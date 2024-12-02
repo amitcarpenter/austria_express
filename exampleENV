@@ -1,0 +1,23 @@
+#============================================
+PORT=4000
+APP_URL =`http://localhost:4000/`
+LOGO_URL =http://localhost:4000/assets/logo/logoChar.png
+
+#=============================================
+SALT_ROUNDS=10
+JWT_EXPIRATION=31d
+REFRESH_TOKEN_EXPIRY=31d
+JWT_SECRET=This_is_my_jwt_secret
+REFRESH_JWT_SECRET=This_is_my_refresh_jwt_secret
+
+#=============================================
+EMAIL_USER=amitcarpenter.ctinfotech@gmail.com
+EMAIL_PASS=scituszopnofvmkl
+
+#=============================================
+TIMEZONE=Asia/Kolkata
+
+#=============================================
+GOOGLE_DISTANCE_API_KEY=AIzaSyB0V1g5YyGB_NE1Lw1QitZZGECA5-1Xnng
+
+
