@@ -18,7 +18,7 @@ const app: Application = express();
 
 (async () => {
   await connectDatabase();
-  await connect_redis_database();
+  // await connect_redis_database();
 })()
 
 const PORT = process.env.PORT as string;
