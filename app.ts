@@ -10,7 +10,7 @@ import configureApp from "./src/config/routes"
 import { connectDatabase } from "./src/config/mysqldb";
 import { connect_redis_database } from "./src/config/redisdb";
 import express, { Application, Request, Response } from "express";
-import { language_converter } from "./src/utils/function";
+import { getLanguages } from "./src/utils/function";
 
 const numCPUs = os.cpus().length;
 
@@ -20,6 +20,7 @@ const app: Application = express();
 (async () => {
   await connectDatabase();
   // await connect_redis_database();
+  // await getLanguages()
 })()
 
 const PORT = process.env.PORT as string;
