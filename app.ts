@@ -10,6 +10,7 @@ import configureApp from "./src/config/routes"
 import { connectDatabase } from "./src/config/mysqldb";
 import { connect_redis_database } from "./src/config/redisdb";
 import express, { Application, Request, Response } from "express";
+import { language_converter } from "./src/utils/function";
 
 const numCPUs = os.cpus().length;
 
@@ -35,6 +36,8 @@ configureApp(app);
 app.get("/", (req: Request, res: Response) => {
   return res.send("Initial project setup done")
 });
+
+
 
 
 // const sslOptions = {

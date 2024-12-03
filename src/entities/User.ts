@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne } from 'typeorm';
+import { Role } from './Role';
 
 @Entity()
 export class User {
@@ -46,6 +47,11 @@ export class User {
 
     @Column({ nullable: true })
     signup_method: string;
+
+
+    @ManyToOne(() => Role, { nullable: true })
+    role: Role;
+
 
     @CreateDateColumn()
     created_at: Date;

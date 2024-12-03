@@ -155,30 +155,7 @@ export const login_admin = async (req: Request, res: Response) => {
     const verifyTokenExpiry = new Date(Date.now() + 3600000);
 
     if (admin.is_verified == false) {
-      // const baseUrl = req.protocol + '://' + req.get('host');
-      // const verificationLink = generateVerificationLink(verifyToken, baseUrl);
-      // const logoPath = path.resolve(__dirname, "../../assets/logo.png");
-
-      // const emailTemplatePath = path.resolve(__dirname, '../../views/verifyAccount.ejs');
-      // const emailHtml = await ejs.renderFile(emailTemplatePath, { verificationLink });
-
-      // const emailOptions = {
-      //   to: email,
-      //   subject: "Verify Your Email Address",
-      //   html: emailHtml,
-      //   attachments: [
-      //     {
-      //       filename: "logo.png",
-      //       path: logoPath,
-      //       cid: "unique@cid",
-      //     },
-      //   ],
-      // };
-      // await sendEmail(emailOptions);
-      // admin.verify_token = verifyToken,
-      //   admin.verify_token_expiry = verifyTokenExpiry
-      // await adminRepository.save(admin);
-      // return handleError(res, 400, "Please verify the email that has been sent to your inbox in order to log in.");
+     
       return handleError(res, 400, "Please Verify your email first")
     }
     const isMatch = await bcrypt.compare(password, admin.password);

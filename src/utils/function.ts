@@ -1,7 +1,10 @@
 import axios from "axios"
+import { translate } from "free-translate"
 
 
-let googledistance_key = "AIzaSyB0V1g5YyGB_NE1Lw1QitZZGECA5-1Xnng"
+let googledistance_key = process.env.GOOGLE_DISTANCE_API_KEY || "AIzaSyB0V1g5YyGB_NE1Lw1QitZZGECA5-1Xnng"
+
+
 
 export const convert_degrees_To_radians = (degrees: number): number => {
     return degrees * (Math.PI / 180);
@@ -77,3 +80,35 @@ export const generate_password = (len: number) => {
     password = password.split('').sort(() => Math.random() - 0.5).join('');
     return password;
 }
+
+// export const language_converter = async (text: string, targetLanguage: string) => {
+//     try {
+//         if (typeof Intl.DisplayNames === "function") {
+//             const displayNames = new Intl.DisplayNames(['hi'], { type: 'language' });
+//             const code = { lang: 'fr' };
+
+//             const languagesWithNames = {
+//                 code: code.lang,
+//                 name: displayNames.of(code.lang) 
+//             };
+//             console.log(languagesWithNames);
+//         } else {
+//             console.error("Intl.DisplayNames is not supported in this environment.");
+//         }
+//     } catch (error: any) {
+//         console.error('Translation error:', error);
+//     }
+// }
+
+export const language_converter = async (text: string, from: any, to: any) => {
+    try {
+        const translatedText = await translate(text, { from: from, to: to });
+        return translatedText;
+    } catch (error: any) {
+        console.error('Translation error:', error);
+    }
+}
+
+
+
+
