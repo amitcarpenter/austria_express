@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne } from 'typeorm';
+import { Route } from './Route';
 
 @Entity()
 export class Bus {
@@ -13,6 +14,9 @@ export class Bus {
 
     @Column({ type: 'integer' })
     total_seats: number;
+
+    @ManyToOne(() => Route, { nullable: false })
+    route: Route;
 
     @Column({ type: 'boolean', default: true })
     is_active: boolean;

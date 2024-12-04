@@ -52,7 +52,6 @@ export class User {
     @ManyToOne(() => Role, { nullable: true })
     role: Role;
 
-
     @CreateDateColumn()
     created_at: Date;
 
