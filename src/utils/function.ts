@@ -111,22 +111,22 @@ export const language_converter = async (text: string, from: any, to: any) => {
 
 export const getLanguages = async () => {
     try {
-      const response = await axios.get('https://restcountries.com/v3.1/all');
-      const countries = response.data;
-  
-      const languages = countries.map((country: any) => ({
-        country: country.name.common,
-        languages: country.languages,
-      }));
-  
-      console.log(languages);
-      return languages;
+        const response = await axios.get('https://restcountries.com/v3.1/all');
+        const countries = response.data;
+
+        const languages = countries.map((country: any) => ({
+            country: country.name.common,
+            languages: country.languages,
+        }));
+
+        console.log(languages);
+        return languages;
     } catch (error) {
-      console.error('Error fetching languages:', error);
-      throw error;
+        console.error('Error fetching languages:', error);
+        throw error;
     }
-  };
-  
+};
+
 
 
 
