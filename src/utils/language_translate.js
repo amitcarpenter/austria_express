@@ -4,13 +4,13 @@ const translate = require('translate-google');
 const app = express();
 const PORT = 3000;
 
-// Middleware
+
 app.use(express.json());
 
-// Translate Function
 (async () => {
     const text = "Hello, how are you?";
-    const targetLanguage = "es";
+    const targetLanguage = "zh-cn";
+    // const targetLanguage = "zh-tw";
 
     try {
         const translatedText = await translate(text, { to: targetLanguage });
