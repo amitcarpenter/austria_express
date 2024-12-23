@@ -45,9 +45,11 @@ export class User {
     @Column({ type: 'boolean', default: true })
     is_active: boolean;
 
+    @Column({ type: 'boolean', default: false })
+    is_blocked: boolean;
+
     @Column({ nullable: true })
     signup_method: string;
-
 
     @ManyToOne(() => Role, { nullable: true })
     role: Role;

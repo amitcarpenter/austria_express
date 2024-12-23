@@ -3,13 +3,22 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateCol
 @Entity()
 export class Route {
     @PrimaryGeneratedColumn()
-    id: number;
+    route_id: number;
+
+    @Column({ unique: true })
+    route_name: string;
 
     @Column()
     start_location: string;
 
     @Column()
     end_location: string;
+
+    @Column({ type: 'float', nullable: true })
+    distance_km: number;
+
+    @Column({ type: 'integer', nullable: true })
+    estimated_time: number;
 
     @Column({ nullable: true })
     description: string;

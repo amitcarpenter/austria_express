@@ -11,6 +11,7 @@ import { connectDatabase } from "./src/config/mysqldb";
 import { connect_redis_database } from "./src/config/redisdb";
 import express, { Application, Request, Response } from "express";
 import { getLanguages } from "./src/utils/function";
+import { upload_file_with_cloudinary } from "./src/utils/cloudinary";
 
 const numCPUs = os.cpus().length;
 
@@ -21,6 +22,10 @@ const app: Application = express();
   await connectDatabase();
   // await connect_redis_database();
   // await getLanguages()
+
+  // let photo_url = "https://evo-go.com/assets/logo/logoChar.png";
+  // let photo_id = "evogo"
+  // await upload_file_with_cloudinary(photo_url, photo_id)
 })()
 
 const PORT = process.env.PORT as string;

@@ -32,7 +32,7 @@ export const crudHandler = async <T extends ObjectLiteral>(
                 read_data = await repository.find({
                     where: options.conditions || {},
                     relations: options.relations || [],
-                    order: options.order || { created: "DESC" },
+                    order: options.order || { created_at: "DESC" },
                 });
                 return read_data;
 

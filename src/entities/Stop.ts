@@ -4,16 +4,25 @@ import { Route } from './Route';
 @Entity()
 export class Stop {
     @PrimaryGeneratedColumn()
-    id: number;
+    stop_id: number;
 
     @Column()
-    name: string;
+    stop_name: string;
 
     @Column({ type: 'integer' })
-    position: number;
+    stop_position: number;
 
     @ManyToOne(() => Route, { nullable: false })
     route: Route;
+
+    @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+    price_from_previous_stop: number;
+
+    @Column({ type: 'float', nullable: true })
+    distance_from_previous_stop: number;
+
+    @Column({ type: 'integer', nullable: true })
+    time_from_previous_stop: number;
 
     @CreateDateColumn()
     created_at: Date;
