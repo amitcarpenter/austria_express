@@ -9,8 +9,8 @@ export class SeatManagement {
     @ManyToOne(() => Bus, { nullable: false })
     bus: Bus;
 
-    @Column({ type: 'integer' })
-    seat_number: number;
+    @Column({ nullable: true })
+    seat_number: string;
 
     // @Column({ type: 'enum', enum: ['economy', 'premium', 'luxury'] })
     // seat_type: 'economy' | 'premium' | 'luxury';

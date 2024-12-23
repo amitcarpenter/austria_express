@@ -36,8 +36,9 @@ const generateAccessToken = (payload: {
 export const register = async (req: Request, res: Response) => {
   try {
     const registerSchema = Joi.object({
-      name: Joi.string().required(),
-      mobile_number: Joi.string().required().allow(""),
+      first_name: Joi.string().required(),
+      last_name: Joi.string().required(),
+      mobile_number: Joi.string().required().allow("").allow(null),
       email: Joi.string().required(),
       password: Joi.string().min(8).required(),
     });
@@ -45,26 +46,28 @@ export const register = async (req: Request, res: Response) => {
     if (error) {
       return handleError(res, 400, error.details[0].message);
     }
-    const { name, password, mobile_number, email } = value;
+    const { first_name, last_name, password, mobile_number, email } = value;
     let lower_email = email.toLowerCase();
     const userRepository = getRepository(User);
 
-    const existMobileNumber = await userRepository.findOne({ where: { mobile_number } });
-    if (existMobileNumber) {
-      return handleError(res, 400, "Mobile Number already exists.");
-    }
+    // const existMobileNumber = await userRepository.findOne({ where: { mobile_number } });
+    // if (existMobileNumber) {
+    //   return handleError(res, 400, "Mobile Number already exists.");
+    // }
 
 
     const existEmail = await userRepository.findOne({ where: { email: lower_email } });
     if (existEmail) {
       return handleError(res, 400, "Email already exists.");
     }
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const verifyToken = crypto.randomBytes(32).toString('hex');
     const verifyTokenExpiry = new Date(Date.now() + 3600000);
 
     const newUser = userRepository.create({
-      name: name,
+      first_name: first_name,
+      last_name: last_name,
       mobile_number: mobile_number,
       email: lower_email,
       password: hashedPassword,
@@ -309,7 +312,7 @@ export const updateProfile = async (req: Request, res: Response) => {
     if (error) {
       return handleError(res, 400, error.details[0].message);
     }
-    const { name, mobile_number } = value;
+    const { first_name, last_name, mobile_number } = value;
     const user_req = req.user as IUser;
     const userRepository = getRepository(User);
 
@@ -318,7 +321,8 @@ export const updateProfile = async (req: Request, res: Response) => {
       return handleError(res, 404, "User Not Found")
     }
 
-    if (name) user.name = name;
+    if (first_name) user.first_name = first_name;
+    if (last_name) user.last_name = last_name;
     if (mobile_number) user.mobile_number = mobile_number;
     if (req.file) {
       let profile_image = "";

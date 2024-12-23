@@ -8,22 +8,22 @@ export class SeatAvailability {
     id: number;
 
     @ManyToOne(() => Route, { nullable: false })
-    route: Route; // Route linked to the availability
+    route: Route;
 
     @ManyToOne(() => SeatManagement, { nullable: false })
-    seat: SeatManagement; // Specific seat
+    seat: SeatManagement;
 
-    @Column({ type: 'date', nullable: false })
-    travel_date: Date; // Date of travel
-
-    @Column({ type: 'integer', nullable: false })
-    from_stop: number; // Starting stop ID for the journey
+    @Column({ type: 'timestamp', nullable: false })
+    travel_date: Date;
 
     @Column({ type: 'integer', nullable: false })
-    to_stop: number; // Ending stop ID for the journey
+    from_stop: number;
+
+    @Column({ type: 'integer', nullable: false })
+    to_stop: number;
 
     @Column({ type: 'enum', enum: ['available', 'booked'], default: 'available' })
-    status: 'available' | 'booked'; // Seat status
+    status: 'available' | 'booked';
 
     @CreateDateColumn()
     created_at: Date;

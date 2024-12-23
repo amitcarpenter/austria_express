@@ -30,12 +30,12 @@ export class Booking {
     passenger_viber_number: string;
 
     @Column({ type: 'decimal', precision: 10, scale: 2 })
-    fare: number; // Total fare for the booking
+    fare: number;
 
     @Column({ nullable: true })
-    payment_reference: string; // Reference for the payment gateway (optional)
+    payment_reference: string;
 
-    @Column({ type: 'date', nullable: false })
+    @Column({ type: 'timestamp', nullable: false })
     travel_date: Date;
 
     @Column({ type: 'time', nullable: true })

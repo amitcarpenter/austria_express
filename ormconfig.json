@@ -5,7 +5,7 @@
   "username": "root",
   "password": "",
   "database": "austria_express",
-  "synchronize": false,
+  "synchronize": true,
   "logging": false,
   "entities": [
     "src/entities/**/*.ts"
