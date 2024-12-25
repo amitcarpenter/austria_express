@@ -62,13 +62,11 @@ export const authenticateAdmin = async (req: Request, res: Response, next: NextF
         if (!authorizationHeader) {
             return handleError(res, 401, "Unauthorized: No token provided")
         }
-        // const token = authorizationHeader.split(' ')[1];
         const tokenParts = authorizationHeader.split(' ');
         if (tokenParts[0] !== 'Bearer' || tokenParts[1] === 'null' || !tokenParts[1]) {
             return handleError(res, 401, "Unauthorized: Invalid or missing token");
         }
         const token = tokenParts[1];
-        // const decodedToken = jwt.verify(token, JWT_SECRET) as { adminId: number; email: string };
         let decodedToken;
         try {
             decodedToken = jwt.verify(token, JWT_SECRET) as { adminId: number; email: string };

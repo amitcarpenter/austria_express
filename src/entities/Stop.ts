@@ -12,6 +12,9 @@ export class Stop {
     @Column({ type: 'integer' })
     stop_position: number;
 
+    @Column({ nullable: true })
+    stop_lat_long: string;
+
     @ManyToOne(() => Route, { nullable: false })
     route: Route;
 
@@ -22,7 +25,7 @@ export class Stop {
     distance_from_previous_stop: number;
 
     @Column({ type: 'integer', nullable: true })
-    time_from_previous_stop: number;
+    time_from_previous_stop: number;    
 
     @CreateDateColumn()
     created_at: Date;

@@ -13,7 +13,7 @@ export class DriverBusAssignment {
     @ManyToOne(() => Bus, { nullable: false })
     bus: Bus;
 
-    @Column({ type: 'timestamp' })
+    @Column({ type: 'timestamp',nullable: true, })
     start_date: Date;
 
     @Column({ type: 'timestamp', nullable: true })

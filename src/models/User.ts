@@ -13,6 +13,7 @@ export interface IUser {
     verify_token?: string | null;
     verify_token_expiry?: Date | null;
     is_verified: boolean;
+    is_blocked: boolean;
     signup_method?: string;
     created_at: Date;
     updated_at: Date;

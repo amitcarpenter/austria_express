@@ -28,7 +28,7 @@ export class Bus {
     @Column({ nullable: true })
     insurance_expiry_date: Date;
 
-    @ManyToOne(() => Driver, { nullable: false })
+    @ManyToOne(() => Driver, { nullable: true })
     driver: Driver;
 
     @CreateDateColumn()

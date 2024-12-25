@@ -11,10 +11,10 @@ export class Event {
     @Column()
     description: string;
 
-    @Column({ type: 'timestamp' })
+    @Column({ type: 'timestamp',nullable: true, })
     start_date: Date;
 
-    @Column({ type: 'timestamp' })
+    @Column({ type: 'timestamp', nullable: true, })
     end_date: Date;
 
     @Column({ type: 'boolean', default: true })

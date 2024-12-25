@@ -52,6 +52,7 @@ export const register_admin = async (req: Request, res: Response) => {
     if (existEmail) {
       return handleError(res, 400, "Email already exists.");
     }
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const verifyToken = crypto.randomBytes(32).toString('hex');
     const verifyTokenExpiry = new Date(Date.now() + 3600000);
@@ -70,7 +71,6 @@ export const register_admin = async (req: Request, res: Response) => {
 
     const baseUrl = req.protocol + '://' + req.get('host');
     const verificationLink = generateVerificationLink(verifyToken, baseUrl);
-    const logoPath = path.resolve(__dirname, "../../assets/logo.png");
 
     const emailTemplatePath = path.resolve(__dirname, '../../views/verifyAccount.ejs');
     const emailHtml = await ejs.renderFile(emailTemplatePath, { verificationLink, image_logo });
@@ -79,18 +79,12 @@ export const register_admin = async (req: Request, res: Response) => {
       to: email,
       subject: "Verify Your Email Address",
       html: emailHtml,
-      attachments: [
-        {
-          filename: "logo.png",
-          path: logoPath,
-          cid: "unique@cid",
-        },
-      ],
     };
-    await sendEmail(emailOptions);
+    // await sendEmail(emailOptions);
 
     const savedAdmin = await adminRepository.save(newAdmin);
-    return handleSuccess(res, 201, `Verification link sent successfully to your email (${email}). Please verify your account.`);
+    return handleSuccess(res, 201, `Admin Account is created Successfully`);
+    // return handleSuccess(res, 201, `Verification link sent successfully to your email (${email}). Please verify your account.`);
   } catch (error: any) {
     console.error('Error in register:', error);
     return handleError(res, 500, error.message);
@@ -151,11 +145,7 @@ export const login_admin = async (req: Request, res: Response) => {
       return handleError(res, 404, "Admin Not Found.");
     }
 
-    const verifyToken = crypto.randomBytes(32).toString('hex');
-    const verifyTokenExpiry = new Date(Date.now() + 3600000);
-
     if (admin.is_verified == false) {
-     
       return handleError(res, 400, "Please Verify your email first")
     }
     const isMatch = await bcrypt.compare(password, admin.password);

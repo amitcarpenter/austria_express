@@ -52,10 +52,13 @@ export class User {
     is_blocked: boolean;
 
     @Column({ nullable: true })
+    block_reason: string;
+
+    @Column({ nullable: true, default: "traditional" })
     signup_method: string;
 
-    @ManyToOne(() => Role, { nullable: true })
-    role: Role;
+    // @ManyToOne(() => Role, { nullable: true })
+    // role: Role;
 
     @CreateDateColumn()
     created_at: Date;

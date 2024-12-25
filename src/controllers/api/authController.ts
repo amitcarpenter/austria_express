@@ -11,6 +11,7 @@ import { Request, Response } from "express";
 import { getRepository, MoreThan } from "typeorm";
 import { sendEmail } from "../../services/otpService";
 import { handleError, handleSuccess } from "../../utils/responseHandler";
+import { Role } from "../../entities/Role";
 
 
 dotenv.config();
@@ -49,6 +50,7 @@ export const register = async (req: Request, res: Response) => {
     const { first_name, last_name, password, mobile_number, email } = value;
     let lower_email = email.toLowerCase();
     const userRepository = getRepository(User);
+    const roleRepository = getRepository(Role);
 
     // const existMobileNumber = await userRepository.findOne({ where: { mobile_number } });
     // if (existMobileNumber) {
@@ -64,6 +66,8 @@ export const register = async (req: Request, res: Response) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const verifyToken = crypto.randomBytes(32).toString('hex');
     const verifyTokenExpiry = new Date(Date.now() + 3600000);
+
+
 
     const newUser = userRepository.create({
       first_name: first_name,
@@ -84,13 +88,7 @@ export const register = async (req: Request, res: Response) => {
     const emailOptions = {
       to: lower_email,
       subject: "Verify Your Email Address",
-      html: emailHtml,
-      attachments: [
-        {
-          filename: "logo.png",
-          cid: "unique@cid",
-        },
-      ],
+      html: emailHtml
     };
     await sendEmail(emailOptions);
 
@@ -133,7 +131,6 @@ export const verifyEmail = async (req: Request, res: Response) => {
   }
 };
 
-
 export const login_user = async (req: Request, res: Response) => {
   try {
     const loginSchema = Joi.object({
@@ -147,6 +144,7 @@ export const login_user = async (req: Request, res: Response) => {
     const { email, password } = value;
     let lower_email = email.toLowerCase()
     const userRepository = getRepository(User);
+    const roleRepository = getRepository(Role);
     const user = await userRepository.findOneBy({ email: lower_email });
     if (!user) {
       return handleError(res, 404, "User Not Found.");
@@ -166,11 +164,17 @@ export const login_user = async (req: Request, res: Response) => {
       return handleError(res, 400, "Your account has been deactivated by the admin.");
     }
 
+    if (user.is_blocked) {
+      return handleError(res, 400, "Your Account has been blocked by admin.");
+    }
+
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return handleError(res, 400, "Invalid credentials")
+
     }
+
     const payload = { userId: user.id, email: user.email };
     const token = generateAccessToken(payload);
     user.jwt_token = token;
@@ -303,8 +307,9 @@ export const getProfile = async (req: Request, res: Response) => {
 export const updateProfile = async (req: Request, res: Response) => {
   try {
     const updateProfileSchema = Joi.object({
-      name: Joi.string().required(),
-      mobile_number: Joi.string().required(),
+      first_name: Joi.string().optional().allow("").allow(null),
+      last_name: Joi.string().optional().allow("").allow(null),
+      mobile_number: Joi.string().optional().allow("").allow(null),
     });
 
     console.log(req.body)

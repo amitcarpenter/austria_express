@@ -8,7 +8,7 @@ export class CityClosure {
     @Column()
     city_name: string;
 
-    @Column({ type: 'timestamp' })
+    @Column({ type: 'timestamp' ,nullable: true,})
     start_date: Date;
 
     @Column({ type: 'timestamp', nullable: true })

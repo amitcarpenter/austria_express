@@ -11,8 +11,14 @@ export class Route {
     @Column()
     start_location: string;
 
+    @Column({ nullable: true })
+    start_location_lat_long: string;
+
     @Column()
     end_location: string;
+
+    @Column({ nullable: true })
+    end_location_lat_long: string;
 
     @Column({ type: 'float', nullable: true })
     distance_km: number;
