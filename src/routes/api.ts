@@ -20,7 +20,10 @@ router.get("/profile", authenticateUser, authControllers.getProfile);
 router.post("/profile/update", authenticateUser, uploadFile, authControllers.updateProfile);
 router.get("/register-success", authControllers.render_success_register);
 router.get("/success-reset", authControllers.render_success_reset);
+router.post("/google-login", authControllers.google_login);
 
 
+//==================================== CONTACT US ==============================
+router.post("/contact-us", authControllers.contactUs);
 
 export default router;

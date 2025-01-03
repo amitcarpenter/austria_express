@@ -13,27 +13,30 @@ export class Bus {
     @Column({ unique: true })
     bus_number: string;
 
-    @Column({ type: 'integer' })
-    total_seats: number;
-
-    @ManyToOne(() => Route, { nullable: false })
-    route: Route;
-
-    @Column({ type: 'boolean', default: true })
-    is_active: boolean;
-
     @Column({ nullable: true })
     registration_number: string;
 
     @Column({ nullable: true })
     insurance_expiry_date: Date;
 
-    @ManyToOne(() => Driver, { nullable: true })
-    driver: Driver;
+    @Column({ type: 'integer' })
+    total_seats: number;
+
+    @Column({ type: 'enum', enum: ['Sleeper', 'Seater', 'AC', 'Non-AC'], default: 'Seater' })
+    bus_type: string;
+
+    @Column({ type: 'boolean', default: true })
+    is_active: boolean;
 
     @CreateDateColumn()
     created_at: Date;
 
     @UpdateDateColumn()
     updated_at: Date;
+
+    @ManyToOne(() => Route, { nullable: true })
+    route: Route;
+
+    @ManyToOne(() => Driver, { nullable: true })
+    driver: Driver;
 }

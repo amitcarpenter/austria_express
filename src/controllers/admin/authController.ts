@@ -258,11 +258,11 @@ export const reset_password = async (req: Request, res: Response) => {
 
 export const render_success_register = (req: Request, res: Response) => {
   return res.render("successRegister.ejs")
-}
+};
 
 export const render_success_reset = (req: Request, res: Response) => {
   return res.render("successReset.ejs")
-}
+};
 
 export const getProfile = async (req: Request, res: Response) => {
   try {
@@ -286,14 +286,14 @@ export const updateProfile = async (req: Request, res: Response) => {
     const updateProfileSchema = Joi.object({
       name: Joi.string().required(),
       mobile_number: Joi.string().required(),
+      email: Joi.string().email().required(),
     });
 
-    console.log(req.body)
     const { error, value } = updateProfileSchema.validate(req.body);
     if (error) {
       return handleError(res, 400, error.details[0].message);
     }
-    const { name, mobile_number } = value;
+    const { name, mobile_number, email } = value;
     const admin_req = req.admin as IAdmin;
     const adminRepository = getRepository(Admin);
 
@@ -303,6 +303,7 @@ export const updateProfile = async (req: Request, res: Response) => {
     }
     if (name) admin.name = name;
     if (mobile_number) admin.mobile_number = mobile_number;
+    if (email) admin.email = email;
     if (req.file) {
       let profile_image = "";
       profile_image = req.file.filename;

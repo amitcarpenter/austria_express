@@ -24,13 +24,13 @@ const image_logo = process.env.LOGO_URL as string;
 export const get_all_user_list = async (req: Request, res: Response) => {
     try {
         const userRepository = getRepository(User)
-        const user_list = await userRepository.find({ order: { created_at: "DESC" } })
+        const user_list = await userRepository.find({ where: { is_verified: true }, order: { created_at: "DESC" } })
         if (!user_list) {
             return handleError(res, 404, "Users Not Found")
         }
         user_list.map((user) => {
             if (user.profile_image) {
-                user.profile_image = APP_URL + user.profile_image
+                user.profile_image = user.profile_image.startsWith('https') ? user.profile_image : APP_URL + user.profile_image
             }
         })
         return handleSuccess(res, 200, `Users Fetched Successfully.`, user_list);
@@ -39,7 +39,6 @@ export const get_all_user_list = async (req: Request, res: Response) => {
         return handleError(res, 500, error.message);
     }
 };
-
 
 export const change_user_status = async (req: Request, res: Response) => {
     try {
@@ -70,7 +69,6 @@ export const change_user_status = async (req: Request, res: Response) => {
         return handleError(res, 500, error.message);
     }
 };
-
 
 //================================== Crud Handler ======================
 

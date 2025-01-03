@@ -7,10 +7,12 @@ import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 import { IUser } from "../../models/User";
 import { User } from "../../entities/User";
+import { Admin } from "../../entities/Admin";
+import { Tbl_Contact_Us } from "../../entities/ContactUs";
 import { Request, Response } from "express";
 import { getRepository, MoreThan } from "typeorm";
 import { sendEmail } from "../../services/otpService";
-import { handleError, handleSuccess } from "../../utils/responseHandler";
+import { handleError, handleSuccess, joiErrorHandle } from "../../utils/responseHandler";
 import { Role } from "../../entities/Role";
 
 
@@ -58,7 +60,7 @@ export const register = async (req: Request, res: Response) => {
     // }
 
 
-    const existEmail = await userRepository.findOne({ where: { email: lower_email } });
+    const existEmail = await userRepository.findOne({ where: { email: lower_email, is_verified: true } });
     if (existEmail) {
       return handleError(res, 400, "Email already exists.");
     }
@@ -157,7 +159,7 @@ export const login_user = async (req: Request, res: Response) => {
     }
 
     if (!user.password) {
-      return handleError(res, 400, "Guest account detected. Please reset your password to continue.");
+      return handleError(res, 400, "Invalid credentials");
     }
 
     if (!user.is_active) {
@@ -374,6 +376,81 @@ export const changePassword = async (req: Request, res: Response) => {
     user.show_password = newPassword;
     await userRepository.save(user);
     return handleSuccess(res, 200, "Password changed successfully")
+  } catch (error: any) {
+    return handleError(res, 500, error.message)
+  }
+};
+
+export const google_login = async (req: Request, res: Response) => {
+  try {
+    const googleSchema = Joi.object({
+      first_name: Joi.string().required(),
+      last_name: Joi.string().required().allow("").allow(null),
+      email: Joi.string().email().required(),
+      profile_image: Joi.string().uri().required()
+    });
+    const { error, value } = googleSchema.validate(req.body);
+    if (error) return joiErrorHandle(res, error);
+    const { first_name, last_name, email, profile_image } = value;
+    let lower_email = email.toLowerCase();
+    const userRepository = getRepository(User);
+    let user = await userRepository.findOneBy({ email: lower_email });
+    if (!user) {
+      const newUser = userRepository.create({
+        first_name: first_name,
+        last_name: last_name,
+        email: lower_email,
+        profile_image: profile_image,
+        is_verified: true,
+        signup_method: "Google"
+      });
+      user = await userRepository.save(newUser);
+      const payload = { userId: user.id, email: user.email };
+      const token: string = generateAccessToken(payload);
+      user.jwt_token = token;
+      await userRepository.save(user);
+      return handleSuccess(res, 201, `Successfully signed up..`);
+    } else {
+      const payload = { userId: user.id, email: user.email };
+      const token: string = generateAccessToken(payload);
+      user.jwt_token = token;
+      await userRepository.save(user);
+      return handleSuccess(res, 200, `Login Successful.`);
+    }
+  } catch (error: any) {
+    return handleError(res, 500, error.message)
+  }
+};
+
+export const contactUs = async (req: Request, res: Response) => {
+  try {
+    const contactusSchema = Joi.object({
+      name: Joi.string().required(),
+      contact_number: Joi.string().required(),
+      email: Joi.string().email().required(),
+      message: Joi.string().required()
+    });
+    const { error, value } = contactusSchema.validate(req.body);
+    if (error) return joiErrorHandle(res, error);
+    const contacusRepository = getRepository(Tbl_Contact_Us);
+    const newContactus = contacusRepository.create(value);
+    await contacusRepository.save(newContactus);
+    const adminRepository = getRepository(Admin);
+    const adminEmail = await adminRepository.find();
+    const emailTemplatePath = path.resolve(__dirname, '../../views/contactUsConfirmation.ejs');
+    const emailHtml = await ejs.renderFile(emailTemplatePath, {
+      name: value.name,
+      contact_number: value.contact_number,
+      email: value.email,
+      message: value.message, image_logo
+    });
+    const emailOptions = {
+      to: adminEmail[0].email,
+      subject: "Contact us support",
+      html: emailHtml
+    };
+    await sendEmail(emailOptions);
+    return handleSuccess(res, 201, 'Thank you for reaching out! Your message has been successfully sent. We will get back to you shortly.');
   } catch (error: any) {
     return handleError(res, 500, error.message)
   }

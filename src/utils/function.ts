@@ -1,14 +1,11 @@
 import axios from "axios"
 import { translate } from "free-translate"
 
-
 let googledistance_key = process.env.GOOGLE_DISTANCE_API_KEY || "AIzaSyB0V1g5YyGB_NE1Lw1QitZZGECA5-1Xnng"
-
-
 
 export const convert_degrees_To_radians = (degrees: number): number => {
     return degrees * (Math.PI / 180);
-}
+};
 
 export const calculate_distance_between_coordinates = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
     const earthRadiusInKm = 6371;
@@ -24,7 +21,7 @@ export const calculate_distance_between_coordinates = (lat1: number, lon1: numbe
     const centralAngle = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const distance = earthRadiusInKm * centralAngle;
     return distance;
-}
+};
 
 export const calculate_age = (dateString: string): number => {
     const [day, month, year] = dateString.split("/").map(Number);
@@ -38,7 +35,7 @@ export const calculate_age = (dateString: string): number => {
         age--;
     }
     return age;
-}
+};
 
 export const distance_checker = (units: string, origins: any, destinations: any) => {
     return new Promise((resolve, reject) => {
@@ -61,7 +58,7 @@ export const distance_checker = (units: string, origins: any, destinations: any)
                 console.error("Error fetching distance:", error.message || error);
             });
     });
-}
+};
 
 export const generate_password = (len: number) => {
     let password = "";
@@ -79,7 +76,7 @@ export const generate_password = (len: number) => {
     }
     password = password.split('').sort(() => Math.random() - 0.5).join('');
     return password;
-}
+};
 
 // export const language_converter = async (text: string, targetLanguage: string) => {
 //     try {
@@ -107,7 +104,7 @@ export const language_converter = async (text: string, from: any, to: any) => {
     } catch (error: any) {
         console.error('Translation error:', error);
     }
-}
+};
 
 export const getLanguages = async () => {
     try {
@@ -126,8 +123,3 @@ export const getLanguages = async () => {
         throw error;
     }
 };
-
-
-
-
-

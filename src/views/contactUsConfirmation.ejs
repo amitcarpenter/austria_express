@@ -1,0 +1,45 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <title>Contact Us - Support</title>
+  <style>
+    table { width: 100%; border-collapse: collapse; }
+    table th, table td { border: 1px solid #ddd; padding: 8px; }
+    table th { background-color: #f2f4f6; font-weight: bold; }
+    body { font-family: 'Helvetica', Arial, sans-serif; }
+  </style>
+</head>
+<body>
+  <table align="center" width="600" style="background-color: #ffffff; margin-bottom: 20px;">
+    <tr>
+      <td align="center" style="padding: 15px;">
+        <img src="<%= image_logo %>" alt="Logo" style="height: 150px; width: 250px;" />
+      </td>
+    </tr>
+  </table>
+  <table align="center" width="600" style="background-color: #ffffff;">
+    <tr>
+      <td style="padding: 30px;">
+        <h1 style="font-size: 20px; font-weight: 600;">Contact Us - Support</h1>
+        <p>Thank you for reaching out to us, <%= name %>! We have received your message, and our team will get back to you shortly.</p>
+        <h3>Your Submitted Details:</h3>
+        <table style="margin: 20px auto; width: 90%; border: 1px solid #ddd;">
+          <thead>
+            <tr>
+              <th>Field</th>
+              <th>Information</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Name</strong></td><td><%= name %></td></tr>
+            <tr><td><strong>Contact Number</strong></td><td><%= contact_number %></td></tr>
+            <tr><td><strong>Email</strong></td><td><%= email %></td></tr>
+            <tr><td><strong>Message</strong></td><td><%= message %></td></tr>
+          </tbody>
+        </table>
+        <p>Thank you,<br><strong>Austria Express Team</strong></p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

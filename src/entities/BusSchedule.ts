@@ -1,6 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Bus } from './Bus';
-import { Stop } from './Stop';
+import { Route } from './Route';
 
 @Entity()
 export class BusSchedule {
@@ -8,16 +8,25 @@ export class BusSchedule {
     schedule_id: number;
 
     @ManyToOne(() => Bus, { nullable: false })
-    bus: Bus;
+    bus_id: Bus;
 
-    @ManyToOne(() => Stop, { nullable: false })
-    stop: Stop;
+    @ManyToOne(() => Route, { nullable: false })
+    route_id: Route;
 
-    @Column({ type: 'time' })
-    arrival_time: string;
+    @Column({ type: 'date' })
+    start_date: Date;
+
+    @Column({ type: 'date' })
+    end_date: Date;
+
+    @Column({ type: 'int', nullable: false, default: 0 })
+    available_seats: number;
 
     @Column({ type: 'time' })
     departure_time: string;
+
+    @Column({ type: 'time' })
+    arrival_time: string;
 
     @CreateDateColumn()
     created_at: Date;

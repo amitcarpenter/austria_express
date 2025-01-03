@@ -6,15 +6,14 @@ import { handleSuccess, handleError, joiErrorHandle } from "../../utils/response
 import { Route } from "../../entities/Route";
 import { Driver } from "../../entities/Driver";
 
-
 export const create_bus = async (req: Request, res: Response) => {
     try {
         const createBusSchema = Joi.object({
             bus_name: Joi.string().required(),
             bus_number: Joi.string().required(),
             total_seats: Joi.number().integer().min(1).required(),
-            route_id: Joi.number().required(),
-            driver_id: Joi.number().required(),
+            route_id: Joi.number().required().optional(),
+            driver_id: Joi.number().required().optional(),
             is_active: Joi.boolean().optional(),
             registration_number: Joi.string().optional(),
             insurance_expiry_date: Joi.date().optional(),
@@ -26,27 +25,24 @@ export const create_bus = async (req: Request, res: Response) => {
         const { bus_name, bus_number, total_seats, route_id, is_active, registration_number, insurance_expiry_date, driver_id } = value;
 
         const busRepository = getRepository(Bus);
-
-
         const routeRepository = getRepository(Route);
         const driverRepository = getRepository(Driver);
 
-
         const route = await routeRepository.findOneBy({ route_id: route_id })
-        if (!route) return handleError(res, 404, "Route Not Found")
+        // if (!route) return handleError(res, 404, "Route Not Found")
 
         const driver = await driverRepository.findOneBy({ driver_id: driver_id })
-        if (!driver) return handleError(res, 404, "Driver Not Found")
+        // if (!driver) return handleError(res, 404, "Driver Not Found")
 
         const newBus = busRepository.create({
             bus_name,
             bus_number,
             total_seats,
-            route: route,
+            route: route_id,
             is_active,
             registration_number,
             insurance_expiry_date,
-            driver: driver,
+            driver: driver_id,
         });
 
         await busRepository.save(newBus);
@@ -58,7 +54,6 @@ export const create_bus = async (req: Request, res: Response) => {
     }
 };
 
-
 export const get_all_buses = async (req: Request, res: Response) => {
     try {
         const busRepository = getRepository(Bus);
@@ -69,7 +64,6 @@ export const get_all_buses = async (req: Request, res: Response) => {
         return handleError(res, 500, error.message);
     }
 };
-
 
 export const update_bus = async (req: Request, res: Response) => {
     try {
@@ -124,7 +118,6 @@ export const update_bus = async (req: Request, res: Response) => {
     }
 };
 
-
 export const update_bus_status = async (req: Request, res: Response) => {
     try {
         const updateBusSchema = Joi.object({
@@ -136,16 +129,16 @@ export const update_bus_status = async (req: Request, res: Response) => {
         if (error) return joiErrorHandle(res, error);
 
         const busRepository = getRepository(Bus);
-        const { bus_id, is_active} = value;
+        const { bus_id, is_active } = value;
         const bus = await busRepository.findOneBy({ bus_id: bus_id });
         if (!bus) return handleError(res, 404, "Bus not found.");
 
-        
+
         let response_message = 'Bus Activated Successfully '
         if (!is_active) response_message = 'Bus De-activated Successfully'
         bus.is_active = is_active
 
-        
+
         await busRepository.save(bus);
 
         return handleSuccess(res, 200, response_message);
@@ -154,7 +147,6 @@ export const update_bus_status = async (req: Request, res: Response) => {
         return handleError(res, 500, error.message);
     }
 };
-
 
 export const delete_bus = async (req: Request, res: Response) => {
     try {
