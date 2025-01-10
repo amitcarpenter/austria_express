@@ -8,7 +8,7 @@ export const convert_degrees_To_radians = (degrees: number): number => {
 };
 
 export const calculate_distance_between_coordinates = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-    const earthRadiusInKm = 6371;
+    const earthRadiusInKm = 6378.1370;
     const deltaLatitude = convert_degrees_To_radians(lat2 - lat1);
     const deltaLongitude = convert_degrees_To_radians(lon2 - lon1);
     const a =
@@ -37,27 +37,63 @@ export const calculate_age = (dateString: string): number => {
     return age;
 };
 
-export const distance_checker = (units: string, origins: any, destinations: any) => {
-    return new Promise((resolve, reject) => {
+export const distance_checker = async (units: 'metric' | 'imperial', origins: string, destinations: string) => {
+    try {
         const apiKey = process.env.GOOGLE_DISTANCE_API_KEY || googledistance_key;
-        const apiUrl = `https://maps.googleapis.com/maps/api/distancematrix/json?units=${units}&origins=${origins}&destinations=${destinations}&key=${apiKey}`;
-        axios.get(apiUrl)
-            .then((response) => {
-                const distanceObj = response.data?.rows[0]?.elements[0];
+        if (!apiKey) {
+            throw new Error('Google Distance API key is missing.');
+        }
 
-                if (distanceObj?.distance) {
-                    const distanceValue = distanceObj.distance.value;
-                    const distanceText = distanceObj.distance.text;
+        const apiUrl = `https://maps.googleapis.com/maps/api/distancematrix/json?units=${units}&origins=${encodeURIComponent(
+            origins
+        )}&destinations=${encodeURIComponent(destinations)}&key=${apiKey}`;
 
-                    resolve({ distance: distanceText, distanceValue });
-                } else {
-                    resolve("No distance information available.");
-                }
-            })
-            .catch((error) => {
-                console.error("Error fetching distance:", error.message || error);
-            });
-    });
+        const response = await axios.get(apiUrl);
+
+        if (response.status !== 200) {
+            throw new Error(`API responded with status ${response.status}: ${response.statusText}`);
+        }
+
+        const distanceObj = response.data?.rows?.[0]?.elements?.[0];
+
+        if (distanceObj?.status === 'OK' && distanceObj.distance) {
+            const { text: distance, value: distanceValue } = distanceObj.distance;
+            return { distance, distanceValue };
+        } else {
+            return `No distance information available. Status: ${distanceObj?.status || 'UNKNOWN'}`;
+        }
+    } catch (error: any) {
+        console.error('Error fetching distance:', error.message || error);
+        return `Error fetching distance: ${error.message || 'Unknown error'}`;
+    }
+};
+
+export const directions_between_pickup_dropp_point = async (origins: string, destinations: string) => {
+    try {
+        const googleApiKey = process.env.GOOGLE_API_KEY;
+        const response = await axios.get('https://maps.googleapis.com/maps/api/directions/json', {
+            params: {
+                origin: origins,
+                destination: destinations,
+                key: googleApiKey,
+            },
+        });
+
+        const { routes, status } = response.data;
+        console.log(response.data);
+
+        if (status !== '200') {
+            throw new Error(`API responded with status ${response.status}: ${response.statusText}`);
+        }
+
+        const route = routes[0]; // Assuming the first route is the desired one
+        const legs = route.legs; // Array of legs in the route (can contain intermediate stops)
+
+        return { legs };
+    } catch (error: any) {
+        console.error('Error fetching distance:', error.message || error);
+        return `Error fetching distance: ${error.message || 'Unknown error'}`;
+    }
 };
 
 export const generate_password = (len: number) => {
@@ -121,5 +157,31 @@ export const getLanguages = async () => {
     } catch (error) {
         console.error('Error fetching languages:', error);
         throw error;
+    }
+};
+
+export const get_lat_long = async (country: string, city: string) => {
+    try {
+        const googleApiKey = process.env.GOOGLE_DISTANCE_API_KEY;
+
+        // Make a GET request to the Google Maps Geocoding API
+        const response = await axios.get('https://maps.googleapis.com/maps/api/geocode/json', {
+            params: {
+                address: `${city}, ${country}`, // Properly pass the address parameter
+                key: googleApiKey, // API key
+            },
+        });
+
+        const { results, status } = response.data;
+
+        // Check if results are available and return the lat/lng
+        if (status === 'OK' && results.length > 0) {
+            const { lat, lng } = results[0].geometry.location;
+            return { lat, lng }; // Return the data as an object
+        } else {
+            throw new Error('No results found'); // Throw an error if no results
+        }
+    } catch (error: any) {
+        throw new Error(error.message || 'An error occurred while fetching lat/long'); // Rethrow the error
     }
 };

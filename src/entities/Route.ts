@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne } from 'typeorm';
 import { Tbl_City } from "../entities/City";
 
 @Entity()
@@ -9,17 +9,14 @@ export class Route {
     @Column({ type: 'enum', enum: ['Austria to Ukraine', 'Ukraine to Austria'] })
     route_direction: string;
 
-    @Column()
-    pickup_point: string;
+    @ManyToOne(() => Tbl_City, { nullable: false })
+    pickup_point: Tbl_City;
 
-    @Column()
-    dropoff_point: string;
+    @ManyToOne(() => Tbl_City, { nullable: false })
+    dropoff_point: Tbl_City;
 
     @Column({ type: 'float', nullable: true })
     distance_km: number;
-
-    @Column({ type: 'decimal', precision: 50, scale: 2 })
-    fixed_price: number;
 
     @Column({ type: 'integer', nullable: true })
     estimated_time: number;
@@ -35,10 +32,4 @@ export class Route {
 
     @UpdateDateColumn()
     updated_at: Date;
-
-    @Column({ nullable: true })
-    start_location_lat_long: string;
-
-    @Column({ nullable: true })
-    end_location_lat_long: string;
 }

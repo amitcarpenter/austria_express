@@ -3,46 +3,28 @@ import { Request, Response } from "express";
 import { getRepository } from "typeorm";
 import { Bus } from "../../entities/Bus";
 import { handleSuccess, handleError, joiErrorHandle } from "../../utils/responseHandler";
-import { Route } from "../../entities/Route";
-import { Driver } from "../../entities/Driver";
 
 export const create_bus = async (req: Request, res: Response) => {
     try {
         const createBusSchema = Joi.object({
             bus_name: Joi.string().required(),
-            bus_number: Joi.string().required(),
-            total_seats: Joi.number().integer().min(1).required(),
-            route_id: Joi.number().required().optional(),
-            driver_id: Joi.number().required().optional(),
-            is_active: Joi.boolean().optional(),
-            registration_number: Joi.string().optional(),
-            insurance_expiry_date: Joi.date().optional(),
+            bus_number_plate: Joi.string().required(),
+            bus_registration_number: Joi.string().required(),
+            number_of_seats: Joi.number().integer().min(1).required(),
         });
 
         const { error, value } = createBusSchema.validate(req.body);
         if (error) return joiErrorHandle(res, error);
 
-        const { bus_name, bus_number, total_seats, route_id, is_active, registration_number, insurance_expiry_date, driver_id } = value;
+        const { bus_name, bus_number_plate, bus_registration_number, number_of_seats } = value;
 
         const busRepository = getRepository(Bus);
-        const routeRepository = getRepository(Route);
-        const driverRepository = getRepository(Driver);
-
-        const route = await routeRepository.findOneBy({ route_id: route_id })
-        // if (!route) return handleError(res, 404, "Route Not Found")
-
-        const driver = await driverRepository.findOneBy({ driver_id: driver_id })
-        // if (!driver) return handleError(res, 404, "Driver Not Found")
 
         const newBus = busRepository.create({
             bus_name,
-            bus_number,
-            total_seats,
-            route: route_id,
-            is_active,
-            registration_number,
-            insurance_expiry_date,
-            driver: driver_id,
+            bus_number_plate,
+            bus_registration_number,
+            number_of_seats
         });
 
         await busRepository.save(newBus);
@@ -57,7 +39,7 @@ export const create_bus = async (req: Request, res: Response) => {
 export const get_all_buses = async (req: Request, res: Response) => {
     try {
         const busRepository = getRepository(Bus);
-        const buses = await busRepository.find({ relations: ["route", "driver"] });
+        const buses = await busRepository.find();
         return handleSuccess(res, 200, "Buses fetched successfully.", buses);
     } catch (error: any) {
         console.error("Error in get_all_buses:", error);
@@ -68,46 +50,25 @@ export const get_all_buses = async (req: Request, res: Response) => {
 export const update_bus = async (req: Request, res: Response) => {
     try {
         const updateBusSchema = Joi.object({
-            bus_id: Joi.number().optional(),
-            bus_name: Joi.string().optional(),
-            bus_number: Joi.string().optional(),
-            total_seats: Joi.number().integer().optional(),
-            route_id: Joi.number().optional(),
-            is_active: Joi.boolean().optional(),
-            registration_number: Joi.string().optional(),
-            insurance_expiry_date: Joi.date().optional(),
-            driver_id: Joi.number().optional(),
+            bus_id: Joi.number().required(),
+            bus_name: Joi.string().required(),
+            bus_number_plate: Joi.string().required(),
+            bus_registration_number: Joi.string().required(),
+            number_of_seats: Joi.number().integer().min(1).required(),
         });
 
         const { error, value } = updateBusSchema.validate(req.body);
         if (error) return joiErrorHandle(res, error);
 
         const busRepository = getRepository(Bus);
-        const { route_id, driver_id, bus_id, bus_name, bus_number, total_seats, is_active, registration_number, insurance_expiry_date } = value;
+        const { bus_id, bus_name, bus_number_plate, bus_registration_number, number_of_seats } = value;
         const bus = await busRepository.findOneBy({ bus_id: bus_id });
         if (!bus) return handleError(res, 404, "Bus not found.");
 
-        const routeRepository = getRepository(Route);
-        const driverRepository = getRepository(Driver);
-
-        if (route_id) {
-            const route = await routeRepository.findOneBy({ route_id: route_id });
-            if (!route) return handleError(res, 404, "Route Not Found");
-            bus.route = route;
-        }
-
-        if (driver_id) {
-            const driver = await driverRepository.findOneBy({ driver_id: driver_id });
-            if (!driver) return handleError(res, 404, "Driver Not Found");
-            bus.driver = driver;
-        }
-
-
         if (bus_name) bus.bus_name = bus_name;
-        if (bus_number) bus.bus_number = bus_number;
-        if (total_seats) bus.total_seats = total_seats;
-        if (registration_number) bus.registration_number = registration_number;
-        if (insurance_expiry_date) bus.insurance_expiry_date = insurance_expiry_date;
+        if (bus_number_plate) bus.bus_number_plate = bus_number_plate;
+        if (bus_registration_number) bus.bus_registration_number = bus_registration_number;
+        if (number_of_seats) bus.number_of_seats = number_of_seats;
 
         await busRepository.save(bus);
 

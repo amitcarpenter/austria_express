@@ -5,6 +5,8 @@ import { authenticateUser } from "../middlewares/auth";
 
 //==================================== Import Controllers ==============================
 import * as authControllers from "../controllers/api/authController";
+import * as busControllers from "../controllers/api/busController";
+import * as cityControllers from "../controllers/api/cityController";
 
 const router = express.Router();
 
@@ -25,5 +27,12 @@ router.post("/google-login", authControllers.google_login);
 
 //==================================== CONTACT US ==============================
 router.post("/contact-us", authControllers.contactUs);
+
+//==================================== BUS SEARCH ==============================
+router.post("/bus-search", busControllers.bus_search);
+
+//==================================== City ===============================
+router.post("/cities_search", cityControllers.searchCities);
+router.post("/cities_countries_search", cityControllers.searchCitiesByCountry);
 
 export default router;

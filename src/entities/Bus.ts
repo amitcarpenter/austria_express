@@ -1,6 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne } from 'typeorm';
-import { Route } from './Route';
-import { Driver } from './Driver';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity()
 export class Bus {
@@ -11,16 +9,13 @@ export class Bus {
     bus_name: string;
 
     @Column({ unique: true })
-    bus_number: string;
+    bus_number_plate: string;
 
     @Column({ nullable: true })
-    registration_number: string;
-
-    @Column({ nullable: true })
-    insurance_expiry_date: Date;
+    bus_registration_number: string;
 
     @Column({ type: 'integer' })
-    total_seats: number;
+    number_of_seats: number;
 
     @Column({ type: 'enum', enum: ['Sleeper', 'Seater', 'AC', 'Non-AC'], default: 'Seater' })
     bus_type: string;
@@ -33,10 +28,4 @@ export class Bus {
 
     @UpdateDateColumn()
     updated_at: Date;
-
-    @ManyToOne(() => Route, { nullable: true })
-    route: Route;
-
-    @ManyToOne(() => Driver, { nullable: true })
-    driver: Driver;
 }

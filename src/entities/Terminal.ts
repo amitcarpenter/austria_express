@@ -1,24 +1,22 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Tbl_City } from "../entities/City";
 
 @Entity()
-export class Tbl_City {
+export class Tbl_Terminal {
     @PrimaryGeneratedColumn()
-    city_id: number;
+    terminal_id: number;
 
     @Column()
-    country_name: string;
+    city_id: number;
 
     @Column({ unique: true })
-    city_name: string;
+    terminal_name: string;
 
     @Column({ type: 'decimal', precision: 10, scale: 7 })
     latitude: number;
 
     @Column({ type: 'decimal', precision: 10, scale: 7 })
     longitude: number;
-
-    @Column({ type: 'boolean', default: true })
-    is_active: boolean;
 
     @CreateDateColumn()
     created_at: Date;
