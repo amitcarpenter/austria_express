@@ -2,7 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, Up
 import { Bus } from './Bus';
 import { Route } from './Route';
 import { Driver } from './Driver';
-import { Tbl_Terminal } from './Terminal'
+import { Terminal } from './Terminal'
 
 @Entity()
 export class BusSchedule {
@@ -10,13 +10,13 @@ export class BusSchedule {
     schedule_id: number;
 
     @ManyToOne(() => Bus, { nullable: false })
-    bus_id: Bus;
+    bus: Bus;
 
     @ManyToOne(() => Route, { nullable: false })
-    route_id: Route;
+    route: Route;
 
     @ManyToOne(() => Driver, { nullable: false })
-    driver_id: Driver;
+    driver: Driver;
 
     @Column({ type: 'time', nullable: false })
     departure_time: string;
@@ -30,11 +30,11 @@ export class BusSchedule {
     @Column({ nullable: true })
     no_of_days: string;
 
-    @ManyToOne(() => Tbl_Terminal, { nullable: true })
-    pickup_terminal_id: Tbl_Terminal;
+    @ManyToOne(() => Terminal, { nullable: true })
+    pickup_terminal: Terminal;
 
-    @ManyToOne(() => Tbl_Terminal, { nullable: true })
-    dropoff_terminal_id: Tbl_Terminal;
+    @ManyToOne(() => Terminal, { nullable: true })
+    dropoff_terminal: Terminal;
 
     @Column({ type: 'enum', enum: ['Daily', 'Weekly', 'Custom'], default: 'Daily' })
     recurrence_pattern: string;

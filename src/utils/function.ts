@@ -185,3 +185,10 @@ export const get_lat_long = async (country: string, city: string) => {
         throw new Error(error.message || 'An error occurred while fetching lat/long'); // Rethrow the error
     }
 };
+
+
+export const getNextDay = (currentDate: Date): Date => {
+    const nextDay = new Date(currentDate);
+    nextDay.setDate(currentDate.getDate() + 1);
+    return nextDay;
+};

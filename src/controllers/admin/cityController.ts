@@ -2,8 +2,8 @@ import Joi from "joi";
 import { Request, Response } from "express";
 import { getRepository } from "typeorm";
 import { handleSuccess, handleError, joiErrorHandle } from "../../utils/responseHandler";
-import { Tbl_City } from "../../entities/City";
-import { Tbl_Terminal } from "../../entities/Terminal";
+import { City } from "../../entities/City";
+import { Terminal } from "../../entities/Terminal";
 import { get_lat_long } from "../../utils/function";
 
 export const createCity = async (req: Request, res: Response) => {
@@ -18,7 +18,7 @@ export const createCity = async (req: Request, res: Response) => {
 
         const { country_name, city_name } = value;
 
-        const cityRepository = getRepository(Tbl_City);
+        const cityRepository = getRepository(City);
 
         const cityResult = await cityRepository.findOne({ where: { city_name: city_name } });
         if (cityResult) return handleError(res, 200, 'City name already exists');
@@ -43,7 +43,7 @@ export const createCity = async (req: Request, res: Response) => {
 
 export const getAllCity = async (req: Request, res: Response) => {
     try {
-        const cityRepository = getRepository(Tbl_City);
+        const cityRepository = getRepository(City);
 
         const cityResult = await cityRepository.find();
 
@@ -69,7 +69,7 @@ export const updateCity = async (req: Request, res: Response) => {
 
         const { city_id, country_name, city_name } = value;
 
-        const cityRepository = getRepository(Tbl_City);
+        const cityRepository = getRepository(City);
 
         const cityResult = await cityRepository.findOne({ where: { city_id: city_id } });
 
@@ -81,7 +81,6 @@ export const updateCity = async (req: Request, res: Response) => {
 
         const latLong = await get_lat_long(country_name, city_name)
 
-        // Proceed with the update
         cityResult.country_name = country_name;
         cityResult.city_name = city_name;
         cityResult.latitude = latLong.lat;
@@ -107,7 +106,7 @@ export const deleteCityById = async (req: Request, res: Response) => {
 
         const { city_id } = value;
 
-        const cityRepository = getRepository(Tbl_City);
+        const cityRepository = getRepository(City);
 
         const cityResult = await cityRepository.findOne({ where: { city_id: city_id } });
 
@@ -133,7 +132,7 @@ export const getCityByCountryName = async (req: Request, res: Response) => {
 
         const { country_name } = value;
 
-        const cityRepository = getRepository(Tbl_City);
+        const cityRepository = getRepository(City);
 
         const cityResult = await cityRepository.find({ where: { country_name: country_name, is_active: true } });
 
@@ -160,19 +159,19 @@ export const createCityTerminal = async (req: Request, res: Response) => {
 
         const { city_id, terminal_name, latitude, longitude } = value;
 
-        const cityRepository = getRepository(Tbl_City);
-        const terminalRepository = getRepository(Tbl_Terminal);
+        const cityRepository = getRepository(City);
+        const terminalRepository = getRepository(Terminal);
 
 
         const cityResult = await cityRepository.findOne({ where: { city_id: city_id } });
         if (!cityResult) return handleError(res, 404, 'City not found');
 
-        const findTerminal = await terminalRepository.findOne({ where: { city_id, terminal_name } });
-        if (findTerminal) return handleError(res, 400, 'Terminal name already exists for this city');
+        const findTerminal = await terminalRepository.findOne({ where: { terminal_name: terminal_name } });
+        if (findTerminal) return handleError(res, 400, 'Terminal name already exists');
 
 
         const newTerminal = terminalRepository.create({
-            city_id,
+            city: cityResult,
             terminal_name,
             latitude,
             longitude
@@ -189,9 +188,9 @@ export const createCityTerminal = async (req: Request, res: Response) => {
 
 export const getAllCityTerminal = async (req: Request, res: Response) => {
     try {
-        const terminalRepository = getRepository(Tbl_Terminal);
+        const terminalRepository = getRepository(Terminal);
 
-        const findTerminals = await terminalRepository.find({ relations: ['city_id'], order: { terminal_id: 'desc' } });
+        const findTerminals = await terminalRepository.find({ relations: ['city'], order: { terminal_id: 'desc' } });
         if (!findTerminals || findTerminals.length === 0) return handleError(res, 400, 'No terminals found');
 
         return handleSuccess(res, 200, "Terminals retrieved successfully", findTerminals);
@@ -212,9 +211,9 @@ export const getCityTerminalById = async (req: Request, res: Response) => {
 
         const { terminal_id } = value;
 
-        const terminalRepository = getRepository(Tbl_Terminal);
+        const terminalRepository = getRepository(Terminal);
 
-        const terminal = await terminalRepository.findOne({ where: { terminal_id }, relations: ['city_id'] });
+        const terminal = await terminalRepository.findOne({ where: { terminal_id }, relations: ['city'] });
 
         if (!terminal) return handleError(res, 404, 'Terminal not found');
 
@@ -240,17 +239,16 @@ export const updateCityTerminalById = async (req: Request, res: Response) => {
 
         const { terminal_id, city_id, terminal_name, latitude, longitude } = value;
 
-        const terminalRepository = getRepository(Tbl_Terminal);
+        const terminalRepository = getRepository(Terminal);
 
         const existingTerminal = await terminalRepository.findOne({ where: { terminal_id } });
         if (!existingTerminal) return handleError(res, 404, 'Terminal not found');
 
-        existingTerminal.city_id = city_id;
+        existingTerminal.city = city_id;
         existingTerminal.terminal_name = terminal_name;
         existingTerminal.latitude = latitude;
         existingTerminal.longitude = longitude;
 
-        // Save the updated terminal
         await terminalRepository.save(existingTerminal);
 
         return handleSuccess(res, 200, 'Terminal updated successfully', existingTerminal);
@@ -271,7 +269,7 @@ export const deleteCityTerminalById = async (req: Request, res: Response) => {
 
         const { terminal_id } = value;
 
-        const terminalRepository = getRepository(Tbl_Terminal);
+        const terminalRepository = getRepository(Terminal);
 
         const terminal = await terminalRepository.findOne({ where: { terminal_id } });
 

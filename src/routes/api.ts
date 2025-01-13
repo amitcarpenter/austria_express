@@ -32,7 +32,7 @@ router.post("/contact-us", authControllers.contactUs);
 router.post("/bus-search", busControllers.bus_search);
 
 //==================================== City ===============================
-router.post("/cities_search", cityControllers.searchCities);
+router.post("/search-by-city", cityControllers.searchCities);
 router.post("/cities_countries_search", cityControllers.searchCitiesByCountry);
 
 export default router;

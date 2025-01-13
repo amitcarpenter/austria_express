@@ -5,7 +5,7 @@ import { addHours, format } from 'date-fns';
 import { handleSuccess, handleError, joiErrorHandle } from "../../utils/responseHandler";
 import { BusSchedule } from "../../entities/BusSchedule";
 import { Driver } from "../../entities/Driver";
-import { Tbl_Terminal } from "../../entities/Terminal";
+import { Terminal } from "../../entities/Terminal";
 
 export const create_busschedule = async (req: Request, res: Response) => {
     try {
@@ -33,19 +33,17 @@ export const create_busschedule = async (req: Request, res: Response) => {
         const driverRecord = await driverRepository.findOne({ where: { driver_id } });
         if (!driverRecord) return handleError(res, 404, "Driver not found");
 
-        // Check for duplicate schedule
         const duplicateSchedule = await busscheduleRepository.findOne({
             where: {
-                bus_id,
-                route_id,
+                bus: bus_id,
+                route: route_id,
                 departure_time
             }
         });
 
         if (duplicateSchedule) return handleError(res, 400, "A bus schedule already exists for the specified bus, route, and date range.");
 
-        // Parse the departure_time and calculate arrival_time
-        const currentDate = new Date(); // Current date
+        const currentDate = new Date();
         const [hours, minutes] = departure_time.split(':').map(Number);
         const departureDateTime = new Date(
             currentDate.getFullYear(),
@@ -57,7 +55,6 @@ export const create_busschedule = async (req: Request, res: Response) => {
 
         const arrivalDateTime = addHours(departureDateTime, total_running_hours);
 
-        // Calculate the difference in days
         const daysDifference = Math.floor(total_running_hours / 24);
         const departureTimeFormatted = format(departureDateTime, 'HH:mm');
         const arrivalTimeFormatted = format(arrivalDateTime, 'HH:mm');
@@ -67,17 +64,17 @@ export const create_busschedule = async (req: Request, res: Response) => {
         const noOfDays = daysDifference > 0 ? `+${daysDifference} day${daysDifference > 1 ? 's' : ''}` : '';
 
         const newBusschedule = busscheduleRepository.create({
-            bus_id,
-            route_id,
-            driver_id,
+            bus: bus_id,
+            route: route_id,
+            driver: driver_id,
             departure_time: departureTimeFormatted,
             arrival_time: arrivalTimeFormatted,
             duration_time: formattedDuration,
             no_of_days: noOfDays,
-            pickup_terminal_id,
-            dropoff_terminal_id,
+            pickup_terminal: pickup_terminal_id,
+            dropoff_terminal: dropoff_terminal_id,
             recurrence_pattern,
-            days_of_week: days_of_week || null, // Default to null if not provided
+            days_of_week: days_of_week || null,
             base_pricing: JSON.parse(base_pricing),
         });
 
@@ -94,7 +91,7 @@ export const get_all_busschedule = async (req: Request, res: Response) => {
     try {
         const busscheduleRepository = getRepository(BusSchedule);
 
-        const busscheduleResult = await busscheduleRepository.find({ relations: ['bus_id', 'route_id', 'driver_id'] });
+        const busscheduleResult = await busscheduleRepository.find({ relations: ['bus', 'route', 'driver'] });
 
         if (!busscheduleResult) return handleError(res, 404, 'No bus schedules found');
 
@@ -117,28 +114,23 @@ export const get_all_busschedule = async (req: Request, res: Response) => {
 
 export const get_all_busschedule_byid = async (req: Request, res: Response) => {
     try {
-        // Define the schema for validating the request body
         const deleteBusscheduleSchema = Joi.object({
             schedule_id: Joi.number().required()
         });
 
-        // Validate the request body against the schema
         const { error, value } = deleteBusscheduleSchema.validate(req.body);
         if (error) return joiErrorHandle(res, error);
 
         const { schedule_id } = value;
 
-        // Get the repository for the BusSchedule entity
         const busscheduleRepository = getRepository(BusSchedule);
 
-        // Find the bus schedule by schedule_id and include related entities
         const busscheduleResult = await busscheduleRepository.findOne({
             where: { schedule_id },
-            relations: ['bus_id', 'route_id']
+            relations: ['bus', 'route']
         });
 
         if (!busscheduleResult) {
-            // Handle case where no bus schedule is found
             return handleError(res, 404, 'Bus schedule not found');
         }
 
@@ -146,13 +138,10 @@ export const get_all_busschedule_byid = async (req: Request, res: Response) => {
             ? JSON.parse(busscheduleResult.base_pricing)
             : null;
 
-        // Add the parsed data as a new property dynamically
         const resultWithParsedPricing = { ...busscheduleResult, parsedBasePricing };
 
-        // Return the found bus schedule
         return handleSuccess(res, 200, 'Bus schedule successfully found', resultWithParsedPricing)
     } catch (error: any) {
-        // Handle unexpected errors
         console.error("Error in get_all_busschedule_byid:", error);
         return handleError(res, 500, error.message);
     }
@@ -190,29 +179,26 @@ export const update_busschedule = async (req: Request, res: Response) => {
 
         const busscheduleRepository = getRepository(BusSchedule);
 
-        // Find the bus schedule by schedule_id
         const busscheduleResult = await busscheduleRepository.findOne({ where: { schedule_id } });
 
         if (!busscheduleResult) return handleError(res, 404, 'Bus schedule not found');
 
-        // Check if bus_id or route_id already exists (if provided)
         if (bus_id) {
-            const existingBus = await busscheduleRepository.find({ where: { bus_id } });
+            const existingBus = await busscheduleRepository.find({ where: { bus: { bus_id: bus_id } } });
             if (existingBus.length > 1 || (existingBus.length === 1 && existingBus[0].schedule_id !== schedule_id)) {
                 return handleError(res, 400, 'Bus ID already exists');
             }
         }
 
         if (route_id) {
-            const existingRoute = await busscheduleRepository.find({ where: { route_id } });
+            const existingRoute = await busscheduleRepository.find({ where: { route: { route_id: route_id } } });
             if (existingRoute.length > 1 || (existingRoute.length === 1 && existingRoute[0].schedule_id !== schedule_id)) {
                 return handleError(res, 400, 'Route ID already exists');
             }
         }
 
-        // Proceed with the update
-        if (bus_id) busscheduleResult.bus_id = bus_id;
-        if (route_id) busscheduleResult.route_id = route_id;
+        if (bus_id) busscheduleResult.bus = bus_id;
+        if (route_id) busscheduleResult.route = route_id;
         // if (start_date) busscheduleResult.start_date = start_date;
         // if (end_date) busscheduleResult.end_date = end_date;
         // if (departure_time) busscheduleResult.departure_time = departure_time;

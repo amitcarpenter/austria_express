@@ -1,13 +1,13 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { Tbl_City } from "../entities/City";
+import { City } from "../entities/City";
 
 @Entity()
-export class Tbl_Terminal {
+export class Terminal {
     @PrimaryGeneratedColumn()
     terminal_id: number;
 
-    @Column()
-    city_id: number;
+    @ManyToOne(() => City, { nullable: false, onDelete: 'CASCADE' })
+    city: City;
 
     @Column({ unique: true })
     terminal_name: string;

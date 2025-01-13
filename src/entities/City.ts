@@ -1,7 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne } from 'typeorm';
 
 @Entity()
-export class Tbl_City {
+export class City {
     @PrimaryGeneratedColumn()
     city_id: number;
 

@@ -3,7 +3,7 @@ import Joi from "joi";
 import { getRepository } from "typeorm";
 import { handleSuccess, handleError, joiErrorHandle } from "../../utils/responseHandler";
 import { Route } from "../../entities/Route";
-import { Tbl_City } from "../../entities/City";
+import { City } from "../../entities/City";
 import { Route_Stops } from "../../entities/RouteStop";
 import { distance_checker } from "../../utils/function";
 
@@ -13,7 +13,7 @@ export const create_route = async (req: Request, res: Response) => {
             route_direction: Joi.string().required(),
             pickup_point: Joi.string().required(),
             dropoff_point: Joi.string().required(),
-            stop_city_ids: Joi.array().items(Joi.string()).required(),
+            stop_city_ids: Joi.array().items(Joi.string()).optional().allow(null, ""),
             description: Joi.string().optional(),
         });
 
@@ -21,7 +21,7 @@ export const create_route = async (req: Request, res: Response) => {
         if (error) return joiErrorHandle(res, error);
 
         const routeRepository = getRepository(Route);
-        const cityRepository = getRepository(Tbl_City);
+        const cityRepository = getRepository(City);
         const routeStopsRepository = getRepository(Route_Stops);
 
         const { route_direction, pickup_point, dropoff_point, stop_city_ids, description } = value;
@@ -38,7 +38,7 @@ export const create_route = async (req: Request, res: Response) => {
 
         if (!distances || !distances.distanceValue) return handleError(res, 400, "Unable to calculate distance. Please check the input coordinates.");
 
-        const distance_km = parseFloat((distances.distanceValue / 1000).toFixed(2)); // Convert meters to kilometers and format to 2 decimals
+        const distance_km = parseFloat((distances.distanceValue / 1000).toFixed(2));
 
         const newRouteData = {
             route_direction,
@@ -51,22 +51,19 @@ export const create_route = async (req: Request, res: Response) => {
         const newRoute = routeRepository.create(newRouteData);
         await routeRepository.save(newRoute);
 
-        for (let i = 0; i < stop_city_ids.length; i++) {
-            const stop_city_id = stop_city_ids[i];
-
-            // Fetch the full Route entity for the relation
-            const routeEntity = await routeRepository.findOne({ where: { route_id: newRoute.route_id } });
-            if (!routeEntity) return handleError(res, 404, "Route not found.");
-
-            // Create a new stop entry for the route
-            const newStopData = {
-                route_id: routeEntity,  // Pass the entire Route entity instead of just the route_id
-                stop_city_id,
-                stop_order: i + 1 // Order the stops starting from 1
-            };
-
-            const newStop = routeStopsRepository.create(newStopData);
-            await routeStopsRepository.save(newStop);
+        if (stop_city_ids) {
+            for (let i = 0; i < stop_city_ids.length; i++) {
+                const stop_city_id = stop_city_ids[i];
+                const routeEntity = await routeRepository.findOne({ where: { route_id: newRoute.route_id } });
+                if (!routeEntity) return handleError(res, 404, "Route not found.");
+                const newStopData = {
+                    route_id: routeEntity,
+                    stop_city_id,
+                    stop_order: i + 1
+                };
+                const newStop = routeStopsRepository.create(newStopData);
+                await routeStopsRepository.save(newStop);
+            }
         }
 
         return handleSuccess(res, 200, "Route Created Successfully.");
@@ -127,7 +124,7 @@ export const update_route = async (req: Request, res: Response) => {
         const { route_id, route_direction, pickup_point, dropoff_point, stop_city_ids, description } = value;
 
         const routeRepository = getRepository(Route);
-        const cityRepository = getRepository(Tbl_City);
+        const cityRepository = getRepository(City);
         const routeStopsRepository = getRepository(Route_Stops);
 
         const route = await routeRepository.findOne({ where: { route_id: route_id } });
@@ -159,7 +156,7 @@ export const update_route = async (req: Request, res: Response) => {
         if (description) route.description = description
 
         await routeRepository.save(route);
-        await routeStopsRepository.delete({ route_id: route_id });
+        await routeStopsRepository.delete({ route: { route_id: route_id } });
 
         for (let i = 0; i < stop_city_ids.length; i++) {
             const stop_city_id = stop_city_ids[i];

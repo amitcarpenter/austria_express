@@ -1,6 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne } from 'typeorm';
 import { Route } from "../entities/Route";
-import { Tbl_City } from "../entities/City";
+import { City } from "../entities/City";
 
 @Entity()
 export class Route_Stops {
@@ -8,10 +8,10 @@ export class Route_Stops {
     stop_id: number;
 
     @ManyToOne(() => Route, { nullable: false, onDelete: "CASCADE" })
-    route_id: Route;
+    route: Route;
 
-    @ManyToOne(() => Tbl_City, { nullable: false })
-    stop_city_id: Tbl_City;
+    @ManyToOne(() => City, { nullable: false })
+    stop_city: City;
 
     @Column({ type: 'integer', nullable: false })
     stop_order: number;
