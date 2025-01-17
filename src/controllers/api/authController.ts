@@ -8,8 +8,8 @@ import jwt from "jsonwebtoken";
 import { IUser } from "../../models/User";
 import { User } from "../../entities/User";
 import { Admin } from "../../entities/Admin";
-import { Tbl_Contact_Us } from "../../entities/ContactUs";
-import { Request, Response } from "express";
+import { Contact_Us } from "../../entities/ContactUs";
+import { query, Request, Response } from "express";
 import { getRepository, MoreThan } from "typeorm";
 import { sendEmail } from "../../services/otpService";
 import { handleError, handleSuccess, joiErrorHandle } from "../../utils/responseHandler";
@@ -432,8 +432,13 @@ export const contactUs = async (req: Request, res: Response) => {
     });
     const { error, value } = contactusSchema.validate(req.body);
     if (error) return joiErrorHandle(res, error);
-    const contacusRepository = getRepository(Tbl_Contact_Us);
-    const newContactus = contacusRepository.create(value);
+    const contacusRepository = getRepository(Contact_Us);
+    const newContactus = contacusRepository.create({
+      name: value.name,
+      contact_number: value.contact_number,
+      email: value.email,
+      query: value.message
+    });
     await contacusRepository.save(newContactus);
     const adminRepository = getRepository(Admin);
     const adminEmail = await adminRepository.find();
@@ -452,6 +457,8 @@ export const contactUs = async (req: Request, res: Response) => {
     await sendEmail(emailOptions);
     return handleSuccess(res, 201, 'Thank you for reaching out! Your message has been successfully sent. We will get back to you shortly.');
   } catch (error: any) {
+    console.log(error);
+
     return handleError(res, 500, error.message)
   }
 };

@@ -5,8 +5,6 @@ import { handleSuccess, handleError, joiErrorHandle } from "../../utils/response
 import { City } from "../../entities/City";
 import { Terminal } from "../../entities/Terminal";
 
-
-
 export const searchCities = async (req: Request, res: Response) => {
     try {
         const searchCitySchema = Joi.object({
@@ -27,7 +25,7 @@ export const searchCities = async (req: Request, res: Response) => {
 
         const updatedCityResult = await Promise.all(
             cityResult.map(async (item) => {
-                const terminalResult = await terminalRepository.find({ where: { city: { city_id: item.city_id } } });
+                const terminalResult = await terminalRepository.find({ where: { city: { city_id: item.city_id }, is_deleted: false } });
                 return { ...item, terminalResult };
             })
         );
@@ -52,12 +50,20 @@ export const searchCitiesByCountry = async (req: Request, res: Response) => {
         const { country_name, city_name } = value;
 
         const cityRepository = getRepository(City);
+        const terminalRepository = getRepository(Terminal);
 
         const cityResult = await cityRepository.find({ where: { country_name: country_name, city_name: ILike(`${city_name}%`) } });
 
         if (!cityResult) return handleError(res, 404, 'Not cities found');
 
-        return handleSuccess(res, 200, 'Cities found successfully', cityResult);
+        const updatedCityResult = await Promise.all(
+            cityResult.map(async (item) => {
+                const terminalResult = await terminalRepository.find({ where: { city: { city_id: item.city_id }, is_deleted: false } });
+                return { ...item, terminalResult };
+            })
+        );
+
+        return handleSuccess(res, 200, 'Cities found successfully', updatedCityResult);
     } catch (error: any) {
         console.error("Error in getCityByCountryName:", error);
         return handleError(res, 500, error.message);

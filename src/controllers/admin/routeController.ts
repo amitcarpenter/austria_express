@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import Joi from "joi";
-import { getRepository } from "typeorm";
+import { getRepository, Like, Not } from "typeorm";
 import { handleSuccess, handleError, joiErrorHandle } from "../../utils/responseHandler";
 import { Route } from "../../entities/Route";
 import { City } from "../../entities/City";
@@ -25,6 +25,9 @@ export const create_route = async (req: Request, res: Response) => {
         const routeStopsRepository = getRepository(Route_Stops);
 
         const { route_direction, pickup_point, dropoff_point, stop_city_ids, description } = value;
+
+        const existingRoute = await routeRepository.findOne({ where: { pickup_point, dropoff_point, is_deleted: false } })
+        if (existingRoute) return handleError(res, 409, 'A route with the same pickup and dropoff points already exists.');
 
         const findPickupCityResult = await cityRepository.findOne({ where: { city_id: pickup_point } });
         if (!findPickupCityResult) return handleError(res, 404, "Pickup city not found.");
@@ -76,11 +79,61 @@ export const create_route = async (req: Request, res: Response) => {
 export const get_all_routes = async (req: Request, res: Response) => {
     try {
         const routeRepository = getRepository(Route);
-        const routes = await routeRepository.find({ relations: ['pickup_point', 'dropoff_point'] });
+        const routes = await routeRepository.find({ where: { is_deleted: false }, relations: ['pickup_point', 'dropoff_point'] });
         if (!routes.length) return handleError(res, 404, 'No routes found.');
         return handleSuccess(res, 200, "Routes fetched successfully.", routes);
     } catch (error: any) {
         console.error("Error in get_all_routes:", error);
+        return handleError(res, 500, error.message);
+    }
+};
+
+export const get_all_routes_by_search_limit = async (req: Request, res: Response) => {
+    try {
+        const { page = 1, limit = 10, search = '', filter = '' } = req.query;
+
+        const pageNumber = parseInt(page as string, 10);
+        const pageLimit = parseInt(limit as string, 10);
+
+        const offset = (pageNumber - 1) * pageLimit;
+
+        const routeRepository = getRepository(Route);
+
+        const [routes, total] = await routeRepository.findAndCount({
+            where: {
+                is_deleted: false,
+                ...(filter && { route_direction: Like(`%${filter}%`) }),
+                ...(search && {
+                    pickup_point: { city_name: Like(`%${search}%`) }
+                }),
+                ...(search && {
+                    pickup_point: { country_name: Like(`%${search}%`) }
+                }),
+                ...(search && {
+                    dropoff_point: { city_name: Like(`%${search}%`) }
+                }),
+                ...(search && {
+                    dropoff_point: { country_name: Like(`%${search}%`) }
+                })
+            },
+            relations: ['pickup_point', 'dropoff_point'],
+            take: pageLimit,
+            skip: offset,
+        });
+
+        const totalPages = Math.ceil(total / pageLimit);
+
+        return handleSuccess(res, 200, "Routes fetched successfully.", {
+            routes,
+            pagination: {
+                total,
+                totalPages,
+                currentPage: pageNumber,
+                pageSize: pageLimit,
+            },
+        });
+    } catch (error: any) {
+        console.error("Error in get_all_routes_by_search_limit:", error);
         return handleError(res, 500, error.message);
     }
 };
@@ -129,6 +182,15 @@ export const update_route = async (req: Request, res: Response) => {
 
         const route = await routeRepository.findOne({ where: { route_id: route_id } });
         if (!route) return handleError(res, 404, "Route not found.");
+
+        const existingRoute = await routeRepository.findOne({
+            where: {
+                pickup_point,
+                dropoff_point,
+                route_id: Not(route_id)
+            },
+        });
+        if (existingRoute) return handleError(res, 409, "A route with the same pickup and dropoff points already exists.");
 
         const findPickupCityResult = await cityRepository.findOne({ where: { city_id: pickup_point } });
         if (!findPickupCityResult) return handleError(res, 404, "Pickup city not found.");
@@ -199,7 +261,7 @@ export const update_route_status = async (req: Request, res: Response) => {
         if (!route) return handleError(res, 404, "Route not found.");
         let response_message = 'Route Activated Successfully '
         if (!is_active) response_message = 'Route De-activated Successfully'
-        route.is_active = is_active
+        route.is_deleted = is_active
         await routeRepository.save(route);
 
         return handleSuccess(res, 200, response_message);
@@ -231,8 +293,10 @@ export const delete_route = async (req: Request, res: Response) => {
             return handleError(res, 404, "Route not found or already deleted.");
         }
 
+        if (route) route.is_deleted = true
+
         // Remove the route
-        await routeRepository.remove(route);
+        await routeRepository.save(route);
 
         return handleSuccess(res, 200, "Route Deleted Successfully.");
     } catch (error: any) {

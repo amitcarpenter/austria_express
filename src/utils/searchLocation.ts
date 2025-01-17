@@ -13,7 +13,7 @@ export const get_location = async (req: Request, res: Response) => {
         if (error) return joiErrorHandle(res, error);
 
         const { location } = value;
-        const googleApiKey = process.env.GOOGLE_DISTANCE_API_KEY
+        const googleApiKey = process.env.GOOGLE_API_KEY
 
         if (!googleApiKey) return handleError(res, 500, 'Google API key is not set');
 

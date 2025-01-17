@@ -1,6 +1,6 @@
 import Joi from "joi";
 import { Request, Response } from "express";
-import { getRepository } from "typeorm";
+import { getRepository, Like, Not } from "typeorm";
 import { handleSuccess, handleError, joiErrorHandle } from "../../utils/responseHandler";
 import { City } from "../../entities/City";
 import { Terminal } from "../../entities/Terminal";
@@ -166,9 +166,8 @@ export const createCityTerminal = async (req: Request, res: Response) => {
         const cityResult = await cityRepository.findOne({ where: { city_id: city_id } });
         if (!cityResult) return handleError(res, 404, 'City not found');
 
-        const findTerminal = await terminalRepository.findOne({ where: { terminal_name: terminal_name } });
-        if (findTerminal) return handleError(res, 400, 'Terminal name already exists');
-
+        const findTerminal = await terminalRepository.findOne({ where: { terminal_name, city: city_id, is_deleted: false } });
+        if (findTerminal) return handleError(res, 400, "Terminal with this name already exists in the city.");
 
         const newTerminal = terminalRepository.create({
             city: cityResult,
@@ -188,12 +187,36 @@ export const createCityTerminal = async (req: Request, res: Response) => {
 
 export const getAllCityTerminal = async (req: Request, res: Response) => {
     try {
+        const { page = 1, limit = 10, search = '' } = req.query;
+
+        const pageNumber = parseInt(page as string, 10);
+        const pageLimit = parseInt(limit as string, 10);
+
+        const offset = (pageNumber - 1) * pageLimit;
+
         const terminalRepository = getRepository(Terminal);
 
-        const findTerminals = await terminalRepository.find({ relations: ['city'], order: { terminal_id: 'desc' } });
-        if (!findTerminals || findTerminals.length === 0) return handleError(res, 400, 'No terminals found');
+        const [terminals, total] = await terminalRepository.findAndCount({
+            relations: ['city'], order: { terminal_id: 'desc' },
+            where: search ? [
+                { terminal_name: Like(`%${search}%`), is_deleted: false },
+                { city: { city_name: Like(`%${search}%`) }, is_deleted: false },
+                { city: { country_name: Like(`%${search}%`) }, is_deleted: false },
+            ] : { is_deleted: false },
+            take: pageLimit,
+            skip: offset,
+        });
 
-        return handleSuccess(res, 200, "Terminals retrieved successfully", findTerminals);
+        const totalPages = Math.ceil(total / pageLimit);
+
+        return handleSuccess(res, 200, "Terminals retrieved successfully", {
+            terminals, pagination: {
+                total,
+                totalPages,
+                currentPage: pageNumber,
+                pageSize: pageLimit,
+            },
+        });
     } catch (error: any) {
         console.error("Error in getCityByCountryName:", error);
         return handleError(res, 500, error.message);
@@ -240,9 +263,19 @@ export const updateCityTerminalById = async (req: Request, res: Response) => {
         const { terminal_id, city_id, terminal_name, latitude, longitude } = value;
 
         const terminalRepository = getRepository(Terminal);
+        const cityRepository = getRepository(City);
 
         const existingTerminal = await terminalRepository.findOne({ where: { terminal_id } });
         if (!existingTerminal) return handleError(res, 404, 'Terminal not found');
+
+        const cityResult = await cityRepository.findOne({ where: { city_id } });
+        if (!cityResult) return handleError(res, 404, 'City not found');
+
+        const duplicateTerminal = await terminalRepository.findOne({
+            where: { terminal_name, city: city_id, is_deleted: false },
+        });
+
+        if (duplicateTerminal) return handleError(res, 400, 'Terminal name already exists in this city');
 
         existingTerminal.city = city_id;
         existingTerminal.terminal_name = terminal_name;
@@ -275,7 +308,35 @@ export const deleteCityTerminalById = async (req: Request, res: Response) => {
 
         if (!terminal) return handleError(res, 404, 'Terminal not found or already deleted');
 
+        if (terminal) terminal.is_deleted = true
+
+        const deleteTerminal = await terminalRepository.save(terminal)
+
         return handleSuccess(res, 200, "Terminal deleted successfully");
+    } catch (error: any) {
+        console.error("Error in getCityByCountryName:", error);
+        return handleError(res, 500, error.message);
+    }
+};
+
+export const getCityTerminalByCityId = async (req: Request, res: Response) => {
+    try {
+        const getCityTerminalSchema = Joi.object({
+            city_id: Joi.number().required()
+        });
+
+        const { error, value } = getCityTerminalSchema.validate(req.body);
+        if (error) return joiErrorHandle(res, error);
+
+        const { city_id } = value;
+
+        const terminalRepository = getRepository(Terminal);
+
+        const terminalsResult = await terminalRepository.find({ where: { city: { city_id: city_id }, is_deleted: false }, relations: ['city'] });
+
+        if (!terminalsResult) return handleError(res, 404, 'No terminals found for the provided city ID');
+
+        return handleSuccess(res, 200, "Successfully retrieved terminals", terminalsResult);
     } catch (error: any) {
         console.error("Error in getCityByCountryName:", error);
         return handleError(res, 500, error.message);

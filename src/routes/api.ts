@@ -33,6 +33,6 @@ router.post("/bus-search", busControllers.bus_search);
 
 //==================================== City ===============================
 router.post("/search-by-city", cityControllers.searchCities);
-router.post("/cities_countries_search", cityControllers.searchCitiesByCountry);
+router.post("/cities-countries-search", cityControllers.searchCitiesByCountry);
 
 export default router;

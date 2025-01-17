@@ -5,7 +5,6 @@ import crypto from "crypto";
 import bcrypt from "bcrypt";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
-import { IUser } from "../../models/User";
 import { User } from "../../entities/User";
 import { IAdmin } from "../../models/Admin";
 import { Admin } from "../../entities/Admin";
@@ -13,7 +12,10 @@ import { Request, Response } from "express";
 import { getRepository, MoreThan } from "typeorm";
 import { sendEmail } from "../../services/otpService";
 import { handleError, handleSuccess } from "../../utils/responseHandler";
-
+import { Bus } from "../../entities/Bus";
+import { Route } from "../../entities/Route";
+import { Driver } from "../../entities/Driver";
+import { BusSchedule } from "../../entities/BusSchedule";
 
 dotenv.config();
 
@@ -102,8 +104,6 @@ export const verifyEmail = async (req: Request, res: Response) => {
     }
     const { token } = value
 
-    console.log(token)
-
     const adminRepository = getRepository(Admin);
     const admin = await adminRepository.findOne({
       where: {
@@ -121,7 +121,6 @@ export const verifyEmail = async (req: Request, res: Response) => {
     await adminRepository.save(admin);
 
     return res.render("successRegister.ejs")
-
   } catch (error: any) {
     console.error('Error in verifyEmail:', error);
     return handleError(res, 500, error.message);
@@ -354,32 +353,41 @@ export const changePassword = async (req: Request, res: Response) => {
   }
 };
 
-// // Dashboard details
-// export const dashboard_details = async (req: Request, res: Response) => {
-//   try {
-//     const user_req = req.user as IUser;
-//     const carBookingRepository = getRepository(CarBooking);
-//     const userRepository = getRepository(User);
+export const dashboard_details = async (req: Request, res: Response) => {
+  try {
+    const userRepository = getRepository(User);
+    const busRepository = getRepository(Bus);
+    const driverRepository = getRepository(Driver);
+    const routeRepository = getRepository(Route);
+    const busscheduleRepository = getRepository(BusSchedule);
 
-//     const completedPayments = await carBookingRepository.find({ where: { is_completed: true } });
-//     console.log(completedPayments, "######################")
-//     let totalRevenue = completedPayments.reduce((acc, booking) => acc + (Number(booking.total_cost) || 0), 0);
+    const userCount = (await userRepository.count({ where: { is_verified: true } }));
+    const busCount = await busRepository.count({ where: { is_deleted: false } });
+    const driverCount = await driverRepository.count({ where: { is_deleted: false } });
+    const routeCount = await routeRepository.count({ where: { is_deleted: false } });
+    const busScheduleCount = await busscheduleRepository.count({});
+    const busscheduleResult = await busscheduleRepository.find({ relations: ['pickup_terminal', 'dropoff_terminal', 'bus', 'driver', 'route', 'route.pickup_point', 'route.dropoff_point'] });
+    busscheduleResult.forEach(item => {
+      if (item.base_pricing && typeof item.base_pricing === 'string') {
+        try {
+          item.base_pricing = JSON.parse(item.base_pricing);
+        } catch (error) {
+          console.error(`Error parsing base_pricing for item with schedule_id ${item.schedule_id}:`, error);
+        }
+      }
+    });
 
-//     const pending_rides = await carBookingRepository.count({ where: { is_completed: false, is_booked: true, is_cancelled: false } });
+    let data = {
+      userCount: userCount || 0,
+      busCount: busCount || 0,
+      driverCount: driverCount || 0,
+      routeCount: routeCount || 0,
+      busScheduleCount: busScheduleCount || 0,
+      busscheduleResult: !busscheduleResult ? [] : busscheduleResult
+    };
 
-//     const active_rides = await carBookingRepository.count({ where: { is_completed: false, is_booked: true, booking_status: "In Progress" } });
-
-//     const userCount = (await userRepository.count({}));
-
-//     let data = {
-//       totalRevenue: totalRevenue || 0,
-//       pending_rides: pending_rides || 0,
-//       active_rides: active_rides || 0,
-//       userCount: userCount || 0,
-//     };
-
-//     return handleSuccess(res, 200, "Dashboard Data Retrieved Successfully", data);
-//   } catch (error: any) {
-//     return handleSuccess(res, 500, error.message);
-//   }
-// };
+    return handleSuccess(res, 200, "Dashboard Data Retrieved Successfully", data);
+  } catch (error: any) {
+    return handleSuccess(res, 500, error.message);
+  }
+};

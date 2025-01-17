@@ -1,19 +1,10 @@
 import Joi from "joi";
-import ejs from 'ejs';
-import path from "path";
-import crypto from "crypto";
-import bcrypt from "bcrypt";
 import dotenv from "dotenv";
-import jwt from "jsonwebtoken";
 import { Request, Response } from "express";
-import { IAdmin } from "../../models/Admin";
 import { User } from "../../entities/User";
-import { Admin } from "../../entities/Admin";
-import { getRepository, MoreThan } from "typeorm";
-import { sendEmail } from "../../services/otpService";
+import { getRepository, Like } from "typeorm";
 import { handleError, handleSuccess, joiErrorHandle } from "../../utils/responseHandler";
 import { crudHandler } from "../../utils/crudHandler";
-
 
 dotenv.config();
 
@@ -23,17 +14,42 @@ const image_logo = process.env.LOGO_URL as string;
 
 export const get_all_user_list = async (req: Request, res: Response) => {
     try {
-        const userRepository = getRepository(User)
-        const user_list = await userRepository.find({ where: { is_verified: true }, order: { created_at: "DESC" } })
-        if (!user_list) {
-            return handleError(res, 404, "Users Not Found")
-        }
-        user_list.map((user) => {
+        const { page = 1, limit = 10, search = '' } = req.query;
+
+        const pageNumber = parseInt(page as string, 10);
+        const pageLimit = parseInt(limit as string, 10);
+
+        const offset = (pageNumber - 1) * pageLimit;
+
+        const userRepository = getRepository(User);
+
+        const [users, total] = await userRepository.findAndCount({
+            where: search ? [
+                { first_name: Like(`%${search}%`) },
+                { last_name: Like(`%${search}%`) },
+                { email: Like(`%${search}%`) },
+                { mobile_number: Like(`%${search}%`) }
+            ] : [],
+            take: pageLimit,
+            skip: offset,
+        });
+
+        const totalPages = Math.ceil(total / pageLimit);
+
+        users.map((user) => {
             if (user.profile_image) {
                 user.profile_image = user.profile_image.startsWith('https') ? user.profile_image : APP_URL + user.profile_image
             }
         })
-        return handleSuccess(res, 200, `Users Fetched Successfully.`, user_list);
+
+        return handleSuccess(res, 200, `Users Fetched Successfully.`, {
+            users, pagination: {
+                total,
+                totalPages,
+                currentPage: pageNumber,
+                pageSize: pageLimit,
+            },
+        });
     } catch (error: any) {
         console.error('Error in register:', error);
         return handleError(res, 500, error.message);

@@ -1,7 +1,7 @@
 import axios from "axios"
 import { translate } from "free-translate"
 
-let googledistance_key = process.env.GOOGLE_DISTANCE_API_KEY || "AIzaSyB0V1g5YyGB_NE1Lw1QitZZGECA5-1Xnng"
+let googledistance_key = process.env.GOOGLE_API_KEY || "AIzaSyB0V1g5YyGB_NE1Lw1QitZZGECA5-1Xnng"
 
 export const convert_degrees_To_radians = (degrees: number): number => {
     return degrees * (Math.PI / 180);
@@ -39,7 +39,7 @@ export const calculate_age = (dateString: string): number => {
 
 export const distance_checker = async (units: 'metric' | 'imperial', origins: string, destinations: string) => {
     try {
-        const apiKey = process.env.GOOGLE_DISTANCE_API_KEY || googledistance_key;
+        const apiKey = process.env.GOOGLE_API_KEY || googledistance_key;
         if (!apiKey) {
             throw new Error('Google Distance API key is missing.');
         }
@@ -162,7 +162,7 @@ export const getLanguages = async () => {
 
 export const get_lat_long = async (country: string, city: string) => {
     try {
-        const googleApiKey = process.env.GOOGLE_DISTANCE_API_KEY;
+        const googleApiKey = process.env.GOOGLE_API_KEY;
 
         // Make a GET request to the Google Maps Geocoding API
         const response = await axios.get('https://maps.googleapis.com/maps/api/geocode/json', {

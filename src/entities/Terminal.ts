@@ -9,7 +9,7 @@ export class Terminal {
     @ManyToOne(() => City, { nullable: false, onDelete: 'CASCADE' })
     city: City;
 
-    @Column({ unique: true })
+    @Column()
     terminal_name: string;
 
     @Column({ type: 'decimal', precision: 10, scale: 7 })
@@ -17,6 +17,9 @@ export class Terminal {
 
     @Column({ type: 'decimal', precision: 10, scale: 7 })
     longitude: number;
+
+    @Column({ type: 'boolean', default: false })
+    is_deleted: boolean;
 
     @CreateDateColumn()
     created_at: Date;

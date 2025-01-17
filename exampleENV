@@ -1,7 +1,7 @@
 #============================================
-PORT=4000
-APP_URL =`http://localhost:4000/`
-LOGO_URL =http://localhost:4000/assets/logo/logoChar.png
+PORT=4200
+APP_URL =`http://192.168.29.44:4200/`
+LOGO_URL = `http://18.229.202.71:4000/Austria%20Express.png`
 
 #=============================================
 SALT_ROUNDS=10
@@ -11,13 +11,11 @@ JWT_SECRET=This_is_my_jwt_secret
 REFRESH_JWT_SECRET=This_is_my_refresh_jwt_secret
 
 #=============================================
-EMAIL_USER=amitcarpenter.ctinfotech@gmail.com
-EMAIL_PASS=wcplalyfdeluoomj
+EMAIL_USER=abhishek.ctinfotech@gmail.com
+EMAIL_PASS=nvydjtkvqdevprxr
 
 #=============================================
-TIMEZONE=Asia/Kolkata
+TIMEZONE=
 
 #=============================================
-GOOGLE_DISTANCE_API_KEY=AIzaSyB0V1g5YyGB_NE1Lw1QitZZGECA5-1Xnng
-
-
+GOOGLE_API_KEY=AIzaSyCFpNWYAi2RMPd49hHAW8KzdZA7sO9gWPs

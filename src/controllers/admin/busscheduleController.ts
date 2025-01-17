@@ -1,11 +1,10 @@
 import Joi, { any } from "joi";
 import { Request, Response } from "express";
-import { Between, getRepository } from "typeorm";
+import { Between, getRepository, Like } from "typeorm";
 import { addHours, format } from 'date-fns';
 import { handleSuccess, handleError, joiErrorHandle } from "../../utils/responseHandler";
 import { BusSchedule } from "../../entities/BusSchedule";
 import { Driver } from "../../entities/Driver";
-import { Terminal } from "../../entities/Terminal";
 
 export const create_busschedule = async (req: Request, res: Response) => {
     try {
@@ -89,13 +88,40 @@ export const create_busschedule = async (req: Request, res: Response) => {
 
 export const get_all_busschedule = async (req: Request, res: Response) => {
     try {
+        const { page = 1, limit = 10, search = '', filter = '' } = req.query;
+
+        const pageNumber = parseInt(page as string, 10);
+        const pageLimit = parseInt(limit as string, 10);
+
+        const offset = (pageNumber - 1) * pageLimit;
+
         const busscheduleRepository = getRepository(BusSchedule);
 
-        const busscheduleResult = await busscheduleRepository.find({ relations: ['bus', 'route', 'driver'] });
+        const whereConditions = [];
+        if (search) {
+            whereConditions.push(
+                { duration_time: Like(`%${search}%`) },
+                { departure_time: Like(`%${search}%`) },
+                { recurrence_pattern: Like(`%${search}%`) }
+            );
+        }
 
-        if (!busscheduleResult) return handleError(res, 404, 'No bus schedules found');
+        if (filter) {
+            whereConditions.push(
+                { route: { route_direction: Like(`%${filter}%`) } }
+            );
+        }
 
-        busscheduleResult.forEach(item => {
+        const [busschedule, total] = await busscheduleRepository.findAndCount({
+            where: whereConditions.length > 0 ? whereConditions : [],
+            relations: ['pickup_terminal', 'dropoff_terminal', 'bus', 'driver', 'route', 'route.pickup_point', 'route.dropoff_point'],
+            take: pageLimit,
+            skip: offset,
+        });
+
+        const totalPages = Math.ceil(total / pageLimit);
+
+        busschedule.forEach(item => {
             if (item.base_pricing && typeof item.base_pricing === 'string') {
                 try {
                     item.base_pricing = JSON.parse(item.base_pricing);
@@ -105,7 +131,14 @@ export const get_all_busschedule = async (req: Request, res: Response) => {
             }
         });
 
-        return handleSuccess(res, 200, 'Bus schedules found successfully', busscheduleResult);
+        return handleSuccess(res, 200, 'Bus schedules found successfully', {
+            busschedule, pagination: {
+                total,
+                totalPages,
+                currentPage: pageNumber,
+                pageSize: pageLimit,
+            },
+        });
     } catch (error: any) {
         console.error("Error in getAllCity:", error);
         return handleError(res, 500, error.message);
@@ -240,6 +273,44 @@ export const delete_busschedule = async (req: Request, res: Response) => {
         return handleSuccess(res, 200, 'Bus schedule deleted successfully');
     } catch (error: any) {
         console.error("Error in delete_busschedule:", error);
+        return handleError(res, 500, error.message);
+    }
+};
+
+export const get_all_busschedule_by_route_id = async (req: Request, res: Response) => {
+    try {
+        const deleteBusscheduleSchema = Joi.object({
+            route_id: Joi.number().required()
+        });
+
+        const { error, value } = deleteBusscheduleSchema.validate(req.body);
+        if (error) return joiErrorHandle(res, error);
+
+        const { route_id } = value;
+
+        const busscheduleRepository = getRepository(BusSchedule);
+
+        const busscheduleResult = await busscheduleRepository.find({
+            where: { route: { route_id } },
+            relations: ['pickup_terminal', 'dropoff_terminal', 'bus', 'driver', 'route', 'route.pickup_point', 'route.dropoff_point']
+        });
+
+        if (!busscheduleResult) return handleError(res, 404, 'Bus schedule not found');
+
+        const resultWithParsedPricing = busscheduleResult.map((item) => {
+            const parsedBasePricing = item.base_pricing && typeof item.base_pricing === 'string'
+                ? JSON.parse(item.base_pricing)
+                : null;
+
+            return {
+                ...item,
+                parsedBasePricing
+            };
+        });
+
+        return handleSuccess(res, 200, 'Bus schedule successfully found', resultWithParsedPricing)
+    } catch (error: any) {
+        console.error("Error in get_all_busschedule_by_route_id:", error);
         return handleError(res, 500, error.message);
     }
 };

@@ -4,16 +4,22 @@ import { Route } from './Route';
 @Entity()
 export class RouteClosure {
     @PrimaryGeneratedColumn()
-    id: number;
+    closure_id: number;
 
     @ManyToOne(() => Route, { nullable: false, onDelete: "CASCADE" })
     route: Route;
 
-    @Column({ type: 'timestamp', nullable: true, })
-    closing_date: Date;
+    @Column({ type: 'date', nullable: false })
+    from_date: Date;
 
-    @Column({ nullable: true })
-    reason: string;
+    @Column({ type: 'date', nullable: false })
+    to_date: Date;
+
+    @Column({ type: 'text', nullable: true })
+    closure_reason: string;
+
+    @Column({ type: 'boolean', default: false })
+    is_deleted: boolean;
 
     @CreateDateColumn()
     created_at: Date;

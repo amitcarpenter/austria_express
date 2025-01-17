@@ -8,7 +8,7 @@ export class Driver {
     @Column()
     driver_name: string;
 
-    @Column({ unique: true })
+    @Column()
     driver_license_number: string;
 
     @Column()
@@ -20,9 +20,6 @@ export class Driver {
     @Column({ type: 'date', nullable: true })
     driver_dob: Date;
 
-    @Column({ type: 'boolean', default: true })
-    is_active: boolean;
-
     @Column({ nullable: true })
     driver_profile_picture: string;
 
@@ -31,6 +28,9 @@ export class Driver {
 
     @Column({ type: 'date', nullable: true })
     license_expiry_date: Date;
+
+    @Column({ type: 'boolean', default: false })
+    is_deleted: boolean;
 
     @CreateDateColumn()
     created_at: Date;
