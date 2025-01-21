@@ -14,8 +14,6 @@ export const create_busschedule = async (req: Request, res: Response) => {
             driver_id: Joi.number().required(),
             departure_time: Joi.string().required(),
             total_running_hours: Joi.number().min(1).required(),
-            pickup_terminal_id: Joi.number().required(),
-            dropoff_terminal_id: Joi.number().required(),
             recurrence_pattern: Joi.string().valid("Daily", "Weekly", "Custom").required(),
             days_of_week: Joi.string().optional(),
             base_pricing: Joi.string().required()
@@ -24,7 +22,7 @@ export const create_busschedule = async (req: Request, res: Response) => {
         const { error, value } = createBusscheduleSchema.validate(req.body);
         if (error) return joiErrorHandle(res, error);
 
-        const { bus_id, route_id, driver_id, departure_time, total_running_hours, pickup_terminal_id, dropoff_terminal_id, recurrence_pattern, days_of_week, base_pricing } = value;
+        const { bus_id, route_id, driver_id, departure_time, total_running_hours, recurrence_pattern, days_of_week, base_pricing } = value;
 
         const busscheduleRepository = getRepository(BusSchedule);
         const driverRepository = getRepository(Driver);
@@ -70,8 +68,6 @@ export const create_busschedule = async (req: Request, res: Response) => {
             arrival_time: arrivalTimeFormatted,
             duration_time: formattedDuration,
             no_of_days: noOfDays,
-            pickup_terminal: pickup_terminal_id,
-            dropoff_terminal: dropoff_terminal_id,
             recurrence_pattern,
             days_of_week: days_of_week || null,
             base_pricing: JSON.parse(base_pricing),
@@ -102,7 +98,9 @@ export const get_all_busschedule = async (req: Request, res: Response) => {
             whereConditions.push(
                 { duration_time: Like(`%${search}%`) },
                 { departure_time: Like(`%${search}%`) },
-                { recurrence_pattern: Like(`%${search}%`) }
+                { recurrence_pattern: Like(`%${search}%`) },
+                { bus: { bus_name: Like(`%${search}%`) } },
+                { bus: { bus_number_plate: Like(`%${search}%`) } }
             );
         }
 
@@ -114,7 +112,7 @@ export const get_all_busschedule = async (req: Request, res: Response) => {
 
         const [busschedule, total] = await busscheduleRepository.findAndCount({
             where: whereConditions.length > 0 ? whereConditions : [],
-            relations: ['pickup_terminal', 'dropoff_terminal', 'bus', 'driver', 'route', 'route.pickup_point', 'route.dropoff_point'],
+            relations: ['bus', 'driver', 'route', 'route.pickup_point', 'route.dropoff_point'],
             take: pageLimit,
             skip: offset,
         });
@@ -292,7 +290,7 @@ export const get_all_busschedule_by_route_id = async (req: Request, res: Respons
 
         const busscheduleResult = await busscheduleRepository.find({
             where: { route: { route_id } },
-            relations: ['pickup_terminal', 'dropoff_terminal', 'bus', 'driver', 'route', 'route.pickup_point', 'route.dropoff_point']
+            relations: ['bus', 'driver', 'route', 'route.pickup_point', 'route.dropoff_point']
         });
 
         if (!busscheduleResult) return handleError(res, 404, 'Bus schedule not found');

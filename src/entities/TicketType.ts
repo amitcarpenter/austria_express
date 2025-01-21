@@ -4,13 +4,10 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, Up
 @Entity()
 export class TicketType {
     @PrimaryGeneratedColumn()
-    id: number;
+    ticket_type_id: number;
 
-    @Column()
-    type: 'Adult' | 'Child' | 'Senior';
-
-    @Column({ type: 'float', nullable: true })
-    discount_percentage: number;
+    @Column({ unique: true })
+    ticket_type: string
 
     @CreateDateColumn()
     created_at: Date;

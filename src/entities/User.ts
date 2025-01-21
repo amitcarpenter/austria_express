@@ -6,6 +6,9 @@ export class User {
     id: number;
 
     @Column({ nullable: true })
+    guest_user: string
+
+    @Column({ nullable: true })
     first_name: string;
 
     @Column({ nullable: true })

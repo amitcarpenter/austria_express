@@ -30,12 +30,6 @@ export class BusSchedule {
     @Column({ nullable: true })
     no_of_days: string;
 
-    @ManyToOne(() => Terminal, { nullable: true })
-    pickup_terminal: Terminal;
-
-    @ManyToOne(() => Terminal, { nullable: true })
-    dropoff_terminal: Terminal;
-
     @Column({ type: 'enum', enum: ['Daily', 'Weekly', 'Custom'], default: 'Daily' })
     recurrence_pattern: string;
 

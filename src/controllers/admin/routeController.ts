@@ -11,8 +11,8 @@ export const create_route = async (req: Request, res: Response) => {
     try {
         const createRouteSchema = Joi.object({
             route_direction: Joi.string().required(),
-            pickup_point: Joi.string().required(),
-            dropoff_point: Joi.string().required(),
+            pickup_point: Joi.number().required(),
+            dropoff_point: Joi.number().required(),
             stop_city_ids: Joi.array().items(Joi.string()).optional().allow(null, ""),
             description: Joi.string().optional(),
         });
@@ -26,7 +26,7 @@ export const create_route = async (req: Request, res: Response) => {
 
         const { route_direction, pickup_point, dropoff_point, stop_city_ids, description } = value;
 
-        const existingRoute = await routeRepository.findOne({ where: { pickup_point, dropoff_point, is_deleted: false } })
+        const existingRoute = await routeRepository.findOne({ where: { pickup_point: { city_id: pickup_point }, dropoff_point: { city_id: dropoff_point }, is_deleted: false } })
         if (existingRoute) return handleError(res, 409, 'A route with the same pickup and dropoff points already exists.');
 
         const findPickupCityResult = await cityRepository.findOne({ where: { city_id: pickup_point } });

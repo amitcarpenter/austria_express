@@ -186,9 +186,20 @@ export const get_lat_long = async (country: string, city: string) => {
     }
 };
 
-
 export const getNextDay = (currentDate: Date): Date => {
     const nextDay = new Date(currentDate);
     nextDay.setDate(currentDate.getDate() + 1);
     return nextDay;
+};
+
+const existingGuestIDs = new Set<string>();
+
+export const generateGuestUserUniqueId = async () => {
+    let uniqueID: string;
+    const timestamp = Date.now();
+    do {
+        uniqueID = `guest-${timestamp}${Math.random().toString(36).substr(2, 9)}`;
+    } while (existingGuestIDs.has(uniqueID));
+    existingGuestIDs.add(uniqueID);
+    return uniqueID;
 };

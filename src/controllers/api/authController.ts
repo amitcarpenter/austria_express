@@ -14,7 +14,7 @@ import { getRepository, MoreThan } from "typeorm";
 import { sendEmail } from "../../services/otpService";
 import { handleError, handleSuccess, joiErrorHandle } from "../../utils/responseHandler";
 import { Role } from "../../entities/Role";
-
+import { generateGuestUserUniqueId } from "../../utils/function";
 
 dotenv.config();
 
@@ -409,16 +409,37 @@ export const google_login = async (req: Request, res: Response) => {
       const token: string = generateAccessToken(payload);
       user.jwt_token = token;
       await userRepository.save(user);
-      return handleSuccess(res, 201, `Successfully signed up..`);
+      return handleSuccess(res, 201, `Successfully signed up..`, token);
     } else {
       const payload = { userId: user.id, email: user.email };
       const token: string = generateAccessToken(payload);
       user.jwt_token = token;
       await userRepository.save(user);
-      return handleSuccess(res, 200, `Login Successful.`);
+      return handleSuccess(res, 200, `Login Successful.`, token);
     }
   } catch (error: any) {
     return handleError(res, 500, error.message)
+  }
+};
+
+export const guest_login = async (req: Request, res: Response) => {
+  try {
+    const userRepository = getRepository(User);
+    const guestID = await generateGuestUserUniqueId();
+    const newUser = userRepository.create({
+      guest_user: guestID,
+      email: `${guestID}@gmail.com`,
+      signup_method: 'guest',
+      is_verified: true
+    });
+    await userRepository.save(newUser);
+    const payload = { userId: newUser.id, email: newUser.email };
+    const token = generateAccessToken(payload);
+    newUser.jwt_token = token;
+    await userRepository.save(newUser);
+    return handleSuccess(res, 200, "Login Successful.", token)
+  } catch (error: any) {
+    return handleError(res, 500, error.message);
   }
 };
 
@@ -458,7 +479,6 @@ export const contactUs = async (req: Request, res: Response) => {
     return handleSuccess(res, 201, 'Thank you for reaching out! Your message has been successfully sent. We will get back to you shortly.');
   } catch (error: any) {
     console.log(error);
-
     return handleError(res, 500, error.message)
   }
 };

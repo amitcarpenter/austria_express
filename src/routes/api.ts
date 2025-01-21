@@ -24,6 +24,8 @@ router.get("/register-success", authControllers.render_success_register);
 router.get("/success-reset", authControllers.render_success_reset);
 router.post("/google-login", authControllers.google_login);
 
+//==================================== GUEST AUTH ==============================
+router.get("/guset-login", authControllers.guest_login);
 
 //==================================== CONTACT US ==============================
 router.post("/contact-us", authControllers.contactUs);

@@ -7,7 +7,8 @@ import * as authControllers from "../controllers/admin/authController";
 import * as userControllers from "../controllers/admin/userController";
 import * as roleControllers from "../controllers/role/roleController";
 import * as routeControllers from "../controllers/admin/routeController";
-import * as routeClosureControllers from "../controllers/admin/routeclosureController";
+import * as routeClosureControllers from "../controllers/admin/routeClosureController";
+import * as ticketTypeControllers from "../controllers/admin/ticketTypeController";
 import * as driverControllers from "../controllers/admin/driverController";
 import * as busControllers from "../controllers/admin/busController";
 import * as busscheduleControllers from "../controllers/admin/busscheduleController";
@@ -77,6 +78,13 @@ router.post("/create-closure", authenticateAdmin, routeClosureControllers.create
 router.get("/get-all-closures-by-limit-search", authenticateAdmin, routeClosureControllers.getRouteClosureSearchLimit);
 router.post("/update-closure", authenticateAdmin, routeClosureControllers.updateRouteClosure);
 router.post("/delete-closure", authenticateAdmin, routeClosureControllers.deleteRouteClosure);
+
+//==================================== Ticket Type ==============================
+router.post("/create-ticket-type", authenticateAdmin, ticketTypeControllers.add_ticket_type);
+router.post("/update-ticket-type", authenticateAdmin, ticketTypeControllers.update_ticket_type);
+router.post("/delete-ticket-type", authenticateAdmin, ticketTypeControllers.delete_ticket_type);
+router.get("/get-all-ticket-type", authenticateAdmin, ticketTypeControllers.get_all_ticket_type);
+router.get("/get-all-ticket-type-search-limit", authenticateAdmin, ticketTypeControllers.get_all_ticket_type_search_limit);
 
 //==================================== Driver ==============================
 router.post("/create-driver", authenticateAdmin, uploadFile, driverControllers.create_driver);

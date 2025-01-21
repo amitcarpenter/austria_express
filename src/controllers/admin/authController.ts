@@ -9,7 +9,7 @@ import { User } from "../../entities/User";
 import { IAdmin } from "../../models/Admin";
 import { Admin } from "../../entities/Admin";
 import { Request, Response } from "express";
-import { getRepository, MoreThan } from "typeorm";
+import { getRepository, LessThanOrEqual, MoreThan, MoreThanOrEqual } from "typeorm";
 import { sendEmail } from "../../services/otpService";
 import { handleError, handleSuccess } from "../../utils/responseHandler";
 import { Bus } from "../../entities/Bus";
@@ -365,25 +365,16 @@ export const dashboard_details = async (req: Request, res: Response) => {
     const busCount = await busRepository.count({ where: { is_deleted: false } });
     const driverCount = await driverRepository.count({ where: { is_deleted: false } });
     const routeCount = await routeRepository.count({ where: { is_deleted: false } });
-    const busScheduleCount = await busscheduleRepository.count({});
-    const busscheduleResult = await busscheduleRepository.find({ relations: ['pickup_terminal', 'dropoff_terminal', 'bus', 'driver', 'route', 'route.pickup_point', 'route.dropoff_point'] });
-    busscheduleResult.forEach(item => {
-      if (item.base_pricing && typeof item.base_pricing === 'string') {
-        try {
-          item.base_pricing = JSON.parse(item.base_pricing);
-        } catch (error) {
-          console.error(`Error parsing base_pricing for item with schedule_id ${item.schedule_id}:`, error);
-        }
-      }
-    });
+    const busScheduleCount = await busscheduleRepository.count();
+    const userList = await userRepository.find({ where: { is_verified: true }, take: 5, order: { id: 'DESC' } });
 
     let data = {
       userCount: userCount || 0,
       busCount: busCount || 0,
       driverCount: driverCount || 0,
       routeCount: routeCount || 0,
-      busScheduleCount: busScheduleCount || 0,
-      busscheduleResult: !busscheduleResult ? [] : busscheduleResult
+      busScheduleCount: !busScheduleCount ? 0 : busScheduleCount,
+      userList: !userList ? [] : userList
     };
 
     return handleSuccess(res, 200, "Dashboard Data Retrieved Successfully", data);

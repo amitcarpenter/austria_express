@@ -5,7 +5,6 @@ import moment from 'moment';
 import { BusSchedule } from "../../entities/BusSchedule";
 import { Route } from '../../entities/Route';
 import { City } from "../../entities/City";
-import { Terminal } from "../../entities/Terminal";
 import { RouteClosure } from "../../entities/RouteClosure";
 import { handleSuccess, handleError, joiErrorHandle } from "../../utils/responseHandler";
 
@@ -25,52 +24,24 @@ export const bus_search = async (req: Request, res: Response) => {
         const busscheduleRepository = getRepository(BusSchedule);
         const routeRepository = getRepository(Route);
         const cityRepository = getRepository(City);
-        const terminalRepository = getRepository(Terminal);
         const routeClosureRepository = getRepository(RouteClosure);
 
         const matchingCityPickupPoint = await cityRepository.findOne({ where: { city_id: pickup_point } });
-        const matchingTerminalPickupPoint = await terminalRepository.findOne({ where: { terminal_id: pickup_point } });
 
         const matchingCityDropPoint = await cityRepository.findOne({ where: { city_id: dropoff_point } });
-        const matchingTerminalDropoffPoint = await terminalRepository.findOne({ where: { terminal_id: dropoff_point } });
 
         let allBusesForRoutes: BusSchedule[] = [];
         const travelDate = moment(travel_date);
         const weekday = travelDate.format('dddd');
+        const currentDate = moment().startOf('day');
 
-        if (matchingCityPickupPoint && matchingTerminalDropoffPoint) {
-            const terminalsInPickupCity = await terminalRepository.find({
-                where: { city: { city_id: matchingCityPickupPoint.city_id } }
-            });
-
-            allBusesForRoutes = await busscheduleRepository.find({
-                where: {
-                    pickup_terminal: In(terminalsInPickupCity.map(terminal => terminal.terminal_id)),
-                    dropoff_terminal: { terminal_id: matchingTerminalDropoffPoint.terminal_id }
-                },
-                order: { departure_time: "DESC" },
-                relations: ['route', 'pickup_terminal', 'dropoff_terminal', 'pickup_terminal.city', 'dropoff_terminal.city']
-            });
-        } else if (matchingTerminalPickupPoint && matchingCityDropPoint) {
-            const terminalsInDropCity = await terminalRepository.find({
-                where: { city: { city_id: matchingCityDropPoint.city_id } }
-            });
-
-            allBusesForRoutes = await busscheduleRepository.find({
-                where: {
-                    pickup_terminal: { terminal_id: matchingTerminalPickupPoint.terminal_id },
-                    dropoff_terminal: In(terminalsInDropCity.map(terminal => terminal.terminal_id))
-                },
-                order: { departure_time: "DESC" },
-                relations: ['route', 'pickup_terminal', 'dropoff_terminal', 'pickup_terminal.city', 'dropoff_terminal.city']
-            });
-        } else if (matchingCityPickupPoint && matchingCityDropPoint) {
+        if (matchingCityPickupPoint && matchingCityDropPoint) {
             const matchingRoutes = await routeRepository.find({
                 where: {
                     pickup_point: { city_id: matchingCityPickupPoint.city_id },
-                    dropoff_point: { city_id: matchingCityDropPoint.city_id }
+                    dropoff_point: { city_id: matchingCityDropPoint.city_id },
+                    is_deleted: false
                 },
-                relations: ['pickup_point', 'dropoff_point']
             });
 
             if (matchingRoutes.length > 0) {
@@ -79,20 +50,13 @@ export const bus_search = async (req: Request, res: Response) => {
                         route: In(matchingRoutes.map(route => route.route_id))
                     },
                     order: { departure_time: "DESC" },
-                    relations: ['route', 'pickup_terminal', 'dropoff_terminal', 'pickup_terminal.city', 'dropoff_terminal.city']
+                    relations: ['bus', 'route', 'route.pickup_point', 'route.dropoff_point']
                 });
+            } else {
+                return handleError(res, 200, 'No buses available for the selected route.');
             }
-        } else if (matchingTerminalPickupPoint && matchingTerminalDropoffPoint) {
-            allBusesForRoutes = await busscheduleRepository.find({
-                where: {
-                    pickup_terminal: { terminal_id: matchingTerminalPickupPoint.terminal_id },
-                    dropoff_terminal: { terminal_id: matchingTerminalDropoffPoint.terminal_id }
-                },
-                order: { departure_time: "DESC" },
-                relations: ['route', 'pickup_terminal', 'dropoff_terminal', 'pickup_terminal.city', 'dropoff_terminal.city']
-            });
         } else {
-            return handleError(res, 404, 'No buses available for the selected route.');
+            return handleError(res, 200, 'No buses available for the selected route.');
         }
 
         // const busesForSelectedDate = allBusesForRoutes.filter(bus => {
@@ -127,66 +91,29 @@ export const bus_search = async (req: Request, res: Response) => {
 
             if (isRouteClosed) continue;
 
-            if (bus.recurrence_pattern === 'Daily' && busDepartureTime.isAfter(currentTime.add(1, 'hours'))) {
-                busesForSelectedDate.push(bus);
-            } else if (
-                ['Weekly', 'Custom'].includes(bus.recurrence_pattern) &&
-                bus.days_of_week?.includes(weekday)
-            ) {
-                busesForSelectedDate.push(bus);
+            if (travelDate.isSame(currentDate, 'day')) {
+                if (busDepartureTime.isAfter(currentTime.add(1, 'hours'))) {
+                    if (bus.recurrence_pattern === 'Daily') {
+                        busesForSelectedDate.push(bus);
+                    } else if (['Weekly', 'Custom'].includes(bus.recurrence_pattern) && bus.days_of_week?.includes(weekday)) {
+                        busesForSelectedDate.push(bus);
+                    }
+                }
+            } else if (travelDate.isAfter(currentDate, 'day')) {
+                if (bus.recurrence_pattern === 'Daily') {
+                    busesForSelectedDate.push(bus);
+                } else if (['Weekly', 'Custom'].includes(bus.recurrence_pattern) && bus.days_of_week?.includes(weekday)) {
+                    busesForSelectedDate.push(bus);
+                }
             }
+            // if (bus.recurrence_pattern === 'Daily' && busDepartureTime.isAfter(currentTime.add(1, 'hours'))) {
+            //     busesForSelectedDate.push(bus);
+            // } else if (['Weekly', 'Custom'].includes(bus.recurrence_pattern) && bus.days_of_week?.includes(weekday) && busDepartureTime.isAfter(currentTime.add(1, 'hours'))) {
+            //     busesForSelectedDate.push(bus);
+            // }
         }
 
-        // if (!busesForSelectedDate.length) {
-        //     const nextDayDate = getNextDay(travelDate);
-        //     const nextDayWeekday = nextDayDate.toLocaleString('en-US', { weekday: 'long' });
-
-        //     let nextAvailableBuses
-        //     if (matchingRoutes.length > 0) {
-        //         nextAvailableBuses = await busscheduleRepository.find({
-        //             where: {
-        //                 route: In(matchingRoutes.map(route => route.route_id)),
-        //                 days_of_week: Raw(
-        //                     (alias) => `FIND_IN_SET('${nextDayWeekday}', ${alias}) > 0`
-        //                 )
-        //             },
-        //             order: {
-        //                 departure_time: "DESC",
-        //             },
-        //             relations: ['pickup_terminal', 'dropoff_terminal']
-        //         });
-        //     } else {
-        //         nextAvailableBuses = await busscheduleRepository.find({
-        //             where: {
-        //                 pickup_terminal: { terminal_id: matchingTerminalPickupPoint?.terminal_id },
-        //                 dropoff_terminal: { terminal_id: matchingTerminalDropoffPoint?.terminal_id },
-        //                 days_of_week: Raw(
-        //                     (alias) => `FIND_IN_SET('${nextDayWeekday}', ${alias}) > 0`
-        //                 )
-        //             },
-        //             order: {
-        //                 departure_time: "DESC",
-        //             },
-        //             relations: ['pickup_terminal', 'dropoff_terminal']
-        //         });
-        //     }
-
-        //     if (!nextAvailableBuses.length) return handleError(res, 404, "No buses available for the selected date or in the near future.");
-
-        //     nextAvailableBuses.forEach(item => {
-        //         if (item.base_pricing && typeof item.base_pricing === 'string') {
-        //             try {
-        //                 item.base_pricing = JSON.parse(item.base_pricing);
-        //             } catch (error) {
-        //                 console.error(`Error parsing base_pricing for item with schedule_id ${item.schedule_id}:`, error);
-        //             }
-        //         }
-        //     });
-
-        //     return handleSuccess(res, 200, "Next available buses found.", nextAvailableBuses);
-        // }
-
-        if (!busesForSelectedDate.length) return handleError(res, 404, 'No buses available for the selected date.');
+        if (!busesForSelectedDate.length) return handleError(res, 200, 'No buses available for the selected date.');
 
         busesForSelectedDate.forEach(item => {
             if (item.base_pricing && typeof item.base_pricing === 'string') {
