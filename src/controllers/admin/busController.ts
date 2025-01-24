@@ -76,6 +76,7 @@ export const getAllBusesBySearchLimit = async (req: Request, res: Response) => {
                 { bus_number_plate: Like(`%${search}%`), is_deleted: false },
                 { bus_registration_number: Like(`%${search}%`), is_deleted: false },
             ] : { is_deleted: false },
+            order: { bus_id: 'DESC' },
             take: pageLimit,
             skip: offset,
         });

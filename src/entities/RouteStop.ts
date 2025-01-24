@@ -16,8 +16,20 @@ export class Route_Stops {
     @Column({ type: 'integer', nullable: false })
     stop_order: number;
 
+    @Column({ type: 'time', nullable: true })
+    arrival_time: string;
+
+    @Column({ type: 'time', nullable: true })
+    stop_time: string;
+
+    @Column({ type: 'time', nullable: true })
+    departure_time: string;
+
     @Column({ type: 'boolean', default: true })
     is_active: boolean;
+
+    @Column({ type: 'boolean', default: false })
+    is_deleted: boolean;
 
     @CreateDateColumn()
     created_at: Date;

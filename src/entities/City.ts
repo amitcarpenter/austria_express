@@ -5,11 +5,14 @@ export class City {
     @PrimaryGeneratedColumn()
     city_id: number;
 
-    @Column()
+    @Column({ nullable: true })
     country_name: string;
 
-    @Column({ unique: true })
+    @Column()
     city_name: string;
+
+    @Column()
+    city_address: string;
 
     @Column({ type: 'decimal', precision: 10, scale: 7 })
     latitude: number;

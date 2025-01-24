@@ -36,9 +36,6 @@ export class BusSchedule {
     @Column({ nullable: true })
     days_of_week: string;
 
-    @Column({ type: "json", nullable: false })
-    base_pricing: { category: string; price: number }[];
-
     @CreateDateColumn()
     created_at: Date;
 

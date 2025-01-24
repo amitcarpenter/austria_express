@@ -81,10 +81,9 @@ router.post("/delete-closure", authenticateAdmin, routeClosureControllers.delete
 
 //==================================== Ticket Type ==============================
 router.post("/create-ticket-type", authenticateAdmin, ticketTypeControllers.add_ticket_type);
-router.post("/update-ticket-type", authenticateAdmin, ticketTypeControllers.update_ticket_type);
 router.post("/delete-ticket-type", authenticateAdmin, ticketTypeControllers.delete_ticket_type);
 router.get("/get-all-ticket-type", authenticateAdmin, ticketTypeControllers.get_all_ticket_type);
-router.get("/get-all-ticket-type-search-limit", authenticateAdmin, ticketTypeControllers.get_all_ticket_type_search_limit);
+router.post("/update-ticket-price", authenticateAdmin, ticketTypeControllers.update_ticket_price);
 
 //==================================== Driver ==============================
 router.post("/create-driver", authenticateAdmin, uploadFile, driverControllers.create_driver);

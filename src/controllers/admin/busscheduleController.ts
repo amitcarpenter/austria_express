@@ -1,6 +1,6 @@
 import Joi, { any } from "joi";
 import { Request, Response } from "express";
-import { Between, getRepository, Like } from "typeorm";
+import { getRepository, Like } from "typeorm";
 import { addHours, format } from 'date-fns';
 import { handleSuccess, handleError, joiErrorHandle } from "../../utils/responseHandler";
 import { BusSchedule } from "../../entities/BusSchedule";
@@ -16,13 +16,12 @@ export const create_busschedule = async (req: Request, res: Response) => {
             total_running_hours: Joi.number().min(1).required(),
             recurrence_pattern: Joi.string().valid("Daily", "Weekly", "Custom").required(),
             days_of_week: Joi.string().optional(),
-            base_pricing: Joi.string().required()
         });
 
         const { error, value } = createBusscheduleSchema.validate(req.body);
         if (error) return joiErrorHandle(res, error);
 
-        const { bus_id, route_id, driver_id, departure_time, total_running_hours, recurrence_pattern, days_of_week, base_pricing } = value;
+        const { bus_id, route_id, driver_id, departure_time, total_running_hours, recurrence_pattern, days_of_week } = value;
 
         const busscheduleRepository = getRepository(BusSchedule);
         const driverRepository = getRepository(Driver);
@@ -37,8 +36,14 @@ export const create_busschedule = async (req: Request, res: Response) => {
                 departure_time
             }
         });
-
         if (duplicateSchedule) return handleError(res, 400, "A bus schedule already exists for the specified bus, route, and date range.");
+
+        const duplicateDriver = await busscheduleRepository.findOne({
+            where: {
+                driver: { driver_id: driver_id }
+            }
+        });
+        if (duplicateDriver) return handleError(res, 400, "This driver is already assigned to another bus.");
 
         const currentDate = new Date();
         const [hours, minutes] = departure_time.split(':').map(Number);
@@ -70,7 +75,6 @@ export const create_busschedule = async (req: Request, res: Response) => {
             no_of_days: noOfDays,
             recurrence_pattern,
             days_of_week: days_of_week || null,
-            base_pricing: JSON.parse(base_pricing),
         });
 
         await busscheduleRepository.save(newBusschedule);
@@ -113,6 +117,7 @@ export const get_all_busschedule = async (req: Request, res: Response) => {
         const [busschedule, total] = await busscheduleRepository.findAndCount({
             where: whereConditions.length > 0 ? whereConditions : [],
             relations: ['bus', 'driver', 'route', 'route.pickup_point', 'route.dropoff_point'],
+            order: { schedule_id: 'DESC' },
             take: pageLimit,
             skip: offset,
         });
@@ -120,13 +125,30 @@ export const get_all_busschedule = async (req: Request, res: Response) => {
         const totalPages = Math.ceil(total / pageLimit);
 
         busschedule.forEach(item => {
-            if (item.base_pricing && typeof item.base_pricing === 'string') {
-                try {
-                    item.base_pricing = JSON.parse(item.base_pricing);
-                } catch (error) {
-                    console.error(`Error parsing base_pricing for item with schedule_id ${item.schedule_id}:`, error);
+            const formatTime = (time: string | null | undefined): string => {
+                if (!time) {
+                    console.warn('Invalid time value:', time);
+                    return '00:00';
                 }
-            }
+
+                const timeParts = time.split(':');
+                if (timeParts.length < 2 || timeParts.length > 3) {
+                    console.warn('Invalid time format:', time);
+                    return '00:00';
+                }
+
+                const date = new Date(`1970-01-01T${time}Z`);
+                if (isNaN(date.getTime())) {
+                    console.warn('Invalid time value:', time);
+                    return '00:00';
+                }
+
+                return date.toISOString().slice(11, 16);
+            };
+
+            item.departure_time = formatTime(item.departure_time);
+            item.arrival_time = formatTime(item.arrival_time);
+            item.duration_time = formatTime(item.duration_time);
         });
 
         return handleSuccess(res, 200, 'Bus schedules found successfully', {
@@ -161,17 +183,9 @@ export const get_all_busschedule_byid = async (req: Request, res: Response) => {
             relations: ['bus', 'route']
         });
 
-        if (!busscheduleResult) {
-            return handleError(res, 404, 'Bus schedule not found');
-        }
+        if (!busscheduleResult) return handleError(res, 404, 'Bus schedule not found');
 
-        const parsedBasePricing = busscheduleResult.base_pricing && typeof busscheduleResult.base_pricing === 'string'
-            ? JSON.parse(busscheduleResult.base_pricing)
-            : null;
-
-        const resultWithParsedPricing = { ...busscheduleResult, parsedBasePricing };
-
-        return handleSuccess(res, 200, 'Bus schedule successfully found', resultWithParsedPricing)
+        return handleSuccess(res, 200, 'Bus schedule successfully found', busscheduleResult)
     } catch (error: any) {
         console.error("Error in get_all_busschedule_byid:", error);
         return handleError(res, 500, error.message);
@@ -190,23 +204,12 @@ export const update_busschedule = async (req: Request, res: Response) => {
             arrival_time: Joi.string().required(),
             recurrence_pattern: Joi.string().valid("Daily", "Weekly", "Custom").required(),
             days_of_week: Joi.string().optional(),
-            base_pricing: Joi.string().custom((value, helpers) => {
-                try {
-                    const parsed = JSON.parse(value);
-                    if (!Array.isArray(parsed)) {
-                        return helpers.error("any.invalid", { message: "Base pricing must be an array of objects." });
-                    }
-                    return value;
-                } catch {
-                    return helpers.error("any.invalid", { message: "Base pricing must be a valid JSON string." });
-                }
-            })
         });
 
         const { error, value } = updateBusscheduleSchema.validate(req.body);
         if (error) return joiErrorHandle(res, error);
 
-        const { schedule_id, bus_id, route_id, start_date, end_date, departure_time, arrival_time, recurrence_pattern, days_of_week, base_pricing } = value;
+        const { schedule_id, bus_id, route_id, start_date, end_date, departure_time, arrival_time, recurrence_pattern, days_of_week } = value;
 
         const busscheduleRepository = getRepository(BusSchedule);
 
@@ -290,23 +293,39 @@ export const get_all_busschedule_by_route_id = async (req: Request, res: Respons
 
         const busscheduleResult = await busscheduleRepository.find({
             where: { route: { route_id } },
+            order: { schedule_id: 'DESC' },
             relations: ['bus', 'driver', 'route', 'route.pickup_point', 'route.dropoff_point']
         });
 
         if (!busscheduleResult) return handleError(res, 404, 'Bus schedule not found');
 
-        const resultWithParsedPricing = busscheduleResult.map((item) => {
-            const parsedBasePricing = item.base_pricing && typeof item.base_pricing === 'string'
-                ? JSON.parse(item.base_pricing)
-                : null;
+        busscheduleResult.forEach(item => {
+            const formatTime = (time: string | null | undefined): string => {
+                if (!time) {
+                    console.warn('Invalid time value:', time);
+                    return '00:00';
+                }
 
-            return {
-                ...item,
-                parsedBasePricing
+                const timeParts = time.split(':');
+                if (timeParts.length < 2 || timeParts.length > 3) {
+                    console.warn('Invalid time format:', time);
+                    return '00:00';
+                }
+
+                const date = new Date(`1970-01-01T${time}Z`);
+                if (isNaN(date.getTime())) {
+                    console.warn('Invalid time value:', time);
+                    return '00:00';
+                }
+
+                return date.toISOString().slice(11, 16);
             };
-        });
 
-        return handleSuccess(res, 200, 'Bus schedule successfully found', resultWithParsedPricing)
+            item.departure_time = formatTime(item.departure_time);
+            item.arrival_time = formatTime(item.arrival_time);
+            item.duration_time = formatTime(item.duration_time);
+        });
+        return handleSuccess(res, 200, 'Bus schedule successfully found', busscheduleResult)
     } catch (error: any) {
         console.error("Error in get_all_busschedule_by_route_id:", error);
         return handleError(res, 500, error.message);

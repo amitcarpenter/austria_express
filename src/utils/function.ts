@@ -160,14 +160,14 @@ export const getLanguages = async () => {
     }
 };
 
-export const get_lat_long = async (country: string, city: string) => {
+export const get_lat_long = async (city_address: string) => {
     try {
         const googleApiKey = process.env.GOOGLE_API_KEY;
 
         // Make a GET request to the Google Maps Geocoding API
         const response = await axios.get('https://maps.googleapis.com/maps/api/geocode/json', {
             params: {
-                address: `${city}, ${country}`, // Properly pass the address parameter
+                address: `${city_address}`, // Properly pass the address parameter
                 key: googleApiKey, // API key
             },
         });

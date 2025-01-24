@@ -80,11 +80,11 @@ export const customerQueryResponse = async (req: Request, res: Response) => {
         });
         const emailOptions = {
             to: email,
-            subject: "Contact Us Support Response",
+            subject: "Austria Express - Support",
             html: emailHtml
         };
         await sendEmail(emailOptions);
-        return handleSuccess(res, 200, "Contact support response updated successfully.", contact);
+        return handleSuccess(res, 200, "Response send successfully.", contact);
     } catch (error: any) {
         console.error("Error in customerQueryResponse:", error);
         return handleError(res, 500, error.message);

@@ -9,7 +9,7 @@ import { User } from "../../entities/User";
 import { IAdmin } from "../../models/Admin";
 import { Admin } from "../../entities/Admin";
 import { Request, Response } from "express";
-import { getRepository, LessThanOrEqual, MoreThan, MoreThanOrEqual } from "typeorm";
+import { getRepository, MoreThan } from "typeorm";
 import { sendEmail } from "../../services/otpService";
 import { handleError, handleSuccess } from "../../utils/responseHandler";
 import { Bus } from "../../entities/Bus";

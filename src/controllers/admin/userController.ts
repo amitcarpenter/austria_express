@@ -1,20 +1,20 @@
-import Joi from "joi";
+import Joi, { not } from "joi";
 import dotenv from "dotenv";
 import { Request, Response } from "express";
 import { User } from "../../entities/User";
-import { getRepository, Like } from "typeorm";
+import { getRepository, Like, Not } from "typeorm";
 import { handleError, handleSuccess, joiErrorHandle } from "../../utils/responseHandler";
 import { crudHandler } from "../../utils/crudHandler";
+import { notEqual } from "assert";
 
 dotenv.config();
 
 const APP_URL = process.env.APP_URL as string;
 const image_logo = process.env.LOGO_URL as string;
 
-
 export const get_all_user_list = async (req: Request, res: Response) => {
     try {
-        const { page = 1, limit = 10, search = '' } = req.query;
+        const { page = 1, limit = 10, search = '', filter = '' } = req.query;
 
         const pageNumber = parseInt(page as string, 10);
         const pageLimit = parseInt(limit as string, 10);
@@ -23,13 +23,27 @@ export const get_all_user_list = async (req: Request, res: Response) => {
 
         const userRepository = getRepository(User);
 
+        const whereConditions = [];
+        if (search) {
+            whereConditions.push(
+                { first_name: Like(`%${search}%`), is_verified: true },
+                { last_name: Like(`%${search}%`), is_verified: true },
+                { email: Like(`%${search}%`), is_verified: true },
+                { mobile_number: Like(`%${search}%`), is_verified: true }
+            );
+        }
+
+        if (filter) {
+            if (filter == 'Guest User') {
+                whereConditions.push({ signup_method: 'guest', is_verified: true });
+            } else {
+                whereConditions.push({ signup_method: Not('guest'), is_verified: true });
+            }
+        }
+
         const [users, total] = await userRepository.findAndCount({
-            where: search ? [
-                { first_name: Like(`%${search}%`) },
-                { last_name: Like(`%${search}%`) },
-                { email: Like(`%${search}%`) },
-                { mobile_number: Like(`%${search}%`) }
-            ] : [],
+            where: whereConditions.length > 0 ? whereConditions : [],
+            order: { id: 'DESC' },
             take: pageLimit,
             skip: offset,
         });

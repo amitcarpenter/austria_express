@@ -4,6 +4,7 @@ import { getRepository, Like, Not } from "typeorm";
 import { handleSuccess, handleError, joiErrorHandle } from "../../utils/responseHandler";
 import { Route } from "../../entities/Route";
 import { City } from "../../entities/City";
+import { TicketType } from "../../entities/TicketType";
 import { Route_Stops } from "../../entities/RouteStop";
 import { distance_checker } from "../../utils/function";
 
@@ -11,61 +12,56 @@ export const create_route = async (req: Request, res: Response) => {
     try {
         const createRouteSchema = Joi.object({
             route_direction: Joi.string().required(),
-            pickup_point: Joi.number().required(),
-            dropoff_point: Joi.number().required(),
-            stop_city_ids: Joi.array().items(Joi.string()).optional().allow(null, ""),
+            title: Joi.string().required(),
             description: Joi.string().optional(),
+            route_stops: Joi.array().items(Joi.number()).optional(),
         });
 
         const { error, value } = createRouteSchema.validate(req.body);
         if (error) return joiErrorHandle(res, error);
 
         const routeRepository = getRepository(Route);
-        const cityRepository = getRepository(City);
         const routeStopsRepository = getRepository(Route_Stops);
+        const ticketTypeRepository = getRepository(TicketType);
 
-        const { route_direction, pickup_point, dropoff_point, stop_city_ids, description } = value;
-
-        const existingRoute = await routeRepository.findOne({ where: { pickup_point: { city_id: pickup_point }, dropoff_point: { city_id: dropoff_point }, is_deleted: false } })
-        if (existingRoute) return handleError(res, 409, 'A route with the same pickup and dropoff points already exists.');
-
-        const findPickupCityResult = await cityRepository.findOne({ where: { city_id: pickup_point } });
-        if (!findPickupCityResult) return handleError(res, 404, "Pickup city not found.");
-
-        const findDropoffCityResult = await cityRepository.findOne({ where: { city_id: dropoff_point } });
-        if (!findDropoffCityResult) return handleError(res, 404, "Dropoff city not found.");
-
-        const units = 'metric';
-
-        const distances: any = await distance_checker(units, `${findPickupCityResult.latitude},${findPickupCityResult.longitude}`, `${findDropoffCityResult.latitude},${findDropoffCityResult.longitude}`);
-
-        if (!distances || !distances.distanceValue) return handleError(res, 400, "Unable to calculate distance. Please check the input coordinates.");
-
-        const distance_km = parseFloat((distances.distanceValue / 1000).toFixed(2));
-
-        const newRouteData = {
-            route_direction,
-            pickup_point,
-            dropoff_point,
-            description,
-            distance_km
-        };
-
-        const newRoute = routeRepository.create(newRouteData);
+        const newRoute = routeRepository.create(value);
         await routeRepository.save(newRoute);
 
-        if (stop_city_ids) {
-            for (let i = 0; i < stop_city_ids.length; i++) {
-                const stop_city_id = stop_city_ids[i];
-                const routeEntity = await routeRepository.findOne({ where: { route_id: newRoute.route_id } });
-                if (!routeEntity) return handleError(res, 404, "Route not found.");
-                const newStopData = {
-                    route_id: routeEntity,
-                    stop_city_id,
-                    stop_order: i + 1
+        if (value.route_stops) {
+            for (let i = 0; i < value.route_stops.length; i++) {
+                const stop_city_id = value.route_stops[i];
+                const newStopData: any = {
+                    route: newRoute,
+                    stop_city: stop_city_id,
+                    stop_order: i + 1,
+                    arrival_time: null,
+                    stop_time: null,
+                    departure_time: null
                 };
+                if (i == 0) {
+                    newStopData.arrival_time = null;
+                    newStopData.departure_time = '';
+                } else if (i === value.route_stops.length - 1) {
+                    newStopData.arrival_time = '';
+                    newStopData.departure_time = null;
+                } else {
+                    newStopData.arrival_time = '';
+                    newStopData.stop_time = '';
+                    newStopData.departure_time = '';
+                }
                 const newStop = routeStopsRepository.create(newStopData);
                 await routeStopsRepository.save(newStop);
+                for (let j = 0; j < value.route_stops.length; j++) {
+                    if (value.route_stops[j + 1] && value.route_stops[i] != value.route_stops[j + 1] && value.route_stops[i] < value.route_stops[j + 1]) {
+                        const newTicketTypes: any = {
+                            route: newRoute,
+                            start_point: value.route_stops[i],
+                            end_point: value.route_stops[j + 1],
+                        }
+                        const newStop = ticketTypeRepository.create(newTicketTypes);
+                        await ticketTypeRepository.save(newStop);
+                    }
+                }
             }
         }
 
@@ -79,9 +75,23 @@ export const create_route = async (req: Request, res: Response) => {
 export const get_all_routes = async (req: Request, res: Response) => {
     try {
         const routeRepository = getRepository(Route);
-        const routes = await routeRepository.find({ where: { is_deleted: false }, relations: ['pickup_point', 'dropoff_point'] });
+        const routeStopsRepository = getRepository(Route_Stops);
+
+        const routes = await routeRepository.find({ where: { is_deleted: false } });
         if (!routes.length) return handleError(res, 404, 'No routes found.');
-        return handleSuccess(res, 200, "Routes fetched successfully.", routes);
+
+        const routesWithStops = await Promise.all(
+            routes.map(async (route) => {
+                const stops = await routeStopsRepository.find({
+                    where: { route: { route_id: route.route_id } },
+                    relations: ["stop_city"],
+                    order: { stop_order: 'ASC' },
+                });
+                return { ...route, route_stops: stops };
+            })
+        );
+
+        return handleSuccess(res, 200, "Routes fetched successfully.", routesWithStops);
     } catch (error: any) {
         console.error("Error in get_all_routes:", error);
         return handleError(res, 500, error.message);
@@ -116,6 +126,7 @@ export const get_all_routes_by_search_limit = async (req: Request, res: Response
                     dropoff_point: { country_name: Like(`%${search}%`) }
                 })
             },
+            order: { route_id: 'DESC' },
             relations: ['pickup_point', 'dropoff_point'],
             take: pageLimit,
             skip: offset,
@@ -183,14 +194,14 @@ export const update_route = async (req: Request, res: Response) => {
         const route = await routeRepository.findOne({ where: { route_id: route_id } });
         if (!route) return handleError(res, 404, "Route not found.");
 
-        const existingRoute = await routeRepository.findOne({
-            where: {
-                pickup_point,
-                dropoff_point,
-                route_id: Not(route_id)
-            },
-        });
-        if (existingRoute) return handleError(res, 409, "A route with the same pickup and dropoff points already exists.");
+        // const existingRoute = await routeRepository.findOne({
+        //     where: {
+        //         pickup_point,
+        //         dropoff_point,
+        //         route_id: Not(route_id)
+        //     },
+        // });
+        // if (existingRoute) return handleError(res, 409, "A route with the same pickup and dropoff points already exists.");
 
         const findPickupCityResult = await cityRepository.findOne({ where: { city_id: pickup_point } });
         if (!findPickupCityResult) return handleError(res, 404, "Pickup city not found.");
@@ -211,11 +222,11 @@ export const update_route = async (req: Request, res: Response) => {
             distance_km = parseFloat((distances.distanceValue / 1000).toFixed(2)); // Convert meters to kilometers
         }
 
-        if (route_direction) route.route_direction = route_direction
-        if (pickup_point) route.pickup_point = pickup_point
-        if (dropoff_point) route.dropoff_point = dropoff_point
-        if (distance_km) route.distance_km = distance_km
-        if (description) route.description = description
+        // if (route_direction) route.route_direction = route_direction
+        // if (pickup_point) route.pickup_point = pickup_point
+        // if (dropoff_point) route.dropoff_point = dropoff_point
+        // if (distance_km) route.distance_km = distance_km
+        // if (description) route.description = description
 
         await routeRepository.save(route);
         await routeStopsRepository.delete({ route: { route_id: route_id } });
@@ -273,7 +284,6 @@ export const update_route_status = async (req: Request, res: Response) => {
 
 export const delete_route = async (req: Request, res: Response) => {
     try {
-        // Validate the request body
         const deleteRouteSchema = Joi.object({
             route_id: Joi.number().required()
         });
@@ -283,20 +293,16 @@ export const delete_route = async (req: Request, res: Response) => {
 
         const { route_id } = value;
         const routeRepository = getRepository(Route);
+        const ticketTypeRepository = getRepository(TicketType);
 
-        // Fetch the route to delete
-        const route = await routeRepository.findOne({
-            where: { route_id: route_id }
-        });
+        const route = await routeRepository.findOne({ where: { route_id: route_id } });
+        const ticketRoute = await ticketTypeRepository.findOne({ where: { route: route_id } });
 
-        if (!route) {
-            return handleError(res, 404, "Route not found or already deleted.");
-        }
+        if (!route) return handleError(res, 404, "Route not found or already deleted.");
 
         if (route) route.is_deleted = true
-
-        // Remove the route
         await routeRepository.save(route);
+        if (ticketRoute) await ticketTypeRepository.save(ticketRoute);
 
         return handleSuccess(res, 200, "Route Deleted Successfully.");
     } catch (error: any) {

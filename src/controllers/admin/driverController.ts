@@ -70,6 +70,7 @@ export const get_all_drivers_by_search_limit = async (req: Request, res: Respons
                 { driver_license_number: Like(`%${search}%`), is_deleted: false },
                 { driver_contact_number: Like(`%${search}%`), is_deleted: false },
             ] : { is_deleted: false },
+            order: { driver_id: 'DESC' },
             take: pageLimit,
             skip: offset,
         });

@@ -41,6 +41,7 @@ export const getRouteClosureSearchLimit = async (req: Request, res: Response) =>
 
         const [routeClosures, total] = await routeClosureRepository.findAndCount({
             where: { is_deleted: false },
+            order: { closure_id: 'DESC' },
             relations: ['route', 'route.pickup_point', 'route.dropoff_point'],
             take: pageLimit,
             skip: offset,
@@ -112,9 +113,7 @@ export const deleteRouteClosure = async (req: Request, res: Response) => {
         const closure = await routeClosureRepository.findOne({ where: { closure_id } });
         if (!closure) return handleError(res, 404, "Route closure not found.");
 
-        closure.is_deleted = true
-
-        await routeClosureRepository.save(closure);
+        await routeClosureRepository.delete({closure_id});
 
         return handleSuccess(res, 200, "Route closure deleted successfully.");
     } catch (error: any) {

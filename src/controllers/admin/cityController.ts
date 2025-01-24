@@ -9,35 +9,34 @@ import { get_lat_long } from "../../utils/function";
 export const createCity = async (req: Request, res: Response) => {
     try {
         const createCitySchema = Joi.object({
-            country_name: Joi.string().required(),
-            city_name: Joi.string().required()
+            country_name: Joi.string().optional(),
+            city_name: Joi.string().required(),
+            city_address: Joi.string().required()
         });
 
         const { error, value } = createCitySchema.validate(req.body);
         if (error) return joiErrorHandle(res, error);
 
-        const { country_name, city_name } = value;
-
         const cityRepository = getRepository(City);
 
-        const cityResult = await cityRepository.findOne({ where: { city_name: city_name } });
-        if (cityResult) return handleError(res, 200, 'City name already exists');
+        const latLong = await get_lat_long(value.city_address);
+        if (!latLong || !latLong.lat || !latLong.lng) {
+            return handleError(res, 400, "Invalid city address. Could not fetch latitude and longitude.");
+        }
 
-        const latLong = await get_lat_long(country_name, city_name)
-
-        const newCity = cityRepository.create({
-            country_name,
-            city_name,
+        const newCityData = {
+            ...value,
             latitude: latLong.lat,
-            longitude: latLong.lng,
-        });
+            longitude: latLong.lng
+        };
 
+        const newCity = cityRepository.create(newCityData);
         await cityRepository.save(newCity);
 
-        return handleSuccess(res, 200, "City Created Successfully.");
+        return handleSuccess(res, 201, "City created successfully.");
     } catch (error: any) {
-        console.error("Error in create_bus:", error);
-        return handleError(res, 500, error.message);
+        console.error("Error in createCity:", error);
+        return handleError(res, 500, "An error occurred while creating the city.");
     }
 };
 
@@ -79,14 +78,14 @@ export const updateCity = async (req: Request, res: Response) => {
 
         if (existingCity && (existingCity.length > 1 || existingCity.length == 1 && existingCity[0].city_id != city_id)) return handleError(res, 400, 'City name already exists');
 
-        const latLong = await get_lat_long(country_name, city_name)
+        // const latLong = await get_lat_long(country_name, city_name)
 
-        cityResult.country_name = country_name;
-        cityResult.city_name = city_name;
-        cityResult.latitude = latLong.lat;
-        cityResult.longitude = latLong.lng;
+        // cityResult.country_name = country_name;
+        // cityResult.city_name = city_name;
+        // cityResult.latitude = latLong.lat;
+        // cityResult.longitude = latLong.lng;
 
-        await cityRepository.save(cityResult);
+        // await cityRepository.save(cityResult);
 
         return handleSuccess(res, 200, 'City updated successfully');
     } catch (error: any) {
