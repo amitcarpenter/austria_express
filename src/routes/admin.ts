@@ -33,15 +33,12 @@ router.get("/register-success", authControllers.render_success_register);
 router.get("/success-reset", authControllers.render_success_reset);
 router.get("/dashboard-details", authenticateAdmin, authControllers.dashboard_details);
 
-
 //==================================== USER ==============================
 router.get("/user-list", authenticateAdmin, userControllers.get_all_user_list);
 router.post("/change-user-status", authenticateAdmin, userControllers.change_user_status);
 
-
 //==================================== USER ==============================
 router.get("/get-all-users", userControllers.getAllUsers);
-
 
 //==================================== Role ==============================
 router.post("/create-role", roleControllers.RolesController.createRole);
@@ -52,26 +49,22 @@ router.post("/delete-role", roleControllers.RolesController.deleteRole);
 //==================================== City ===============================
 router.post("/create-city", cityControllers.createCity);
 router.get("/get-all-city", cityControllers.getAllCity);
-router.post("/update-city", cityControllers.updateCity);
+router.get("/get-city-by-id", cityControllers.getCityById);
+router.post("/update-city", uploadFile, cityControllers.updateCity);
 router.post("/delete-city", cityControllers.deleteCityById);
-router.post("/get-cityby-countryname", cityControllers.getCityByCountryName);
-
-//==================================== City Terminal ===============================
-router.post("/create-city-terminal", cityControllers.createCityTerminal);
-router.get("/get-all-city-terminal", cityControllers.getAllCityTerminal);
-router.post("/get-city-terminal-id", cityControllers.getCityTerminalById);
-router.post("/update-city-terminal-id", cityControllers.updateCityTerminalById);
-router.post("/delete-city-terminal-id", cityControllers.deleteCityTerminalById);
-router.post("/get-city-terminal-cityid", cityControllers.getCityTerminalByCityId);
+router.get("/get-all-active-city", cityControllers.getAllActiveCity);
 
 //==================================== Route ==============================
 router.post("/create-route", authenticateAdmin, routeControllers.create_route);
 router.get("/get-all-routes", authenticateAdmin, routeControllers.get_all_routes);
+router.get("/get-all-active-routes", authenticateAdmin, routeControllers.get_all_active_routes);
 router.get("/get-all-routes-by-limit-search", authenticateAdmin, routeControllers.get_all_routes_by_search_limit);
 router.post("/get-route-by-id", authenticateAdmin, routeControllers.get_route_by_id);
 router.post("/update-route", authenticateAdmin, routeControllers.update_route);
 router.post("/update-route-status", authenticateAdmin, routeControllers.update_route_status);
 router.post("/delete-route", authenticateAdmin, routeControllers.delete_route);
+router.post("/update-departuretime", authenticateAdmin, routeControllers.update_departuretime);
+router.post("/create-copy-route", authenticateAdmin, routeControllers.create_copy_route);
 
 //==================================== Route Closure ==============================
 router.post("/create-closure", authenticateAdmin, routeClosureControllers.createRouteClosure);
@@ -83,6 +76,7 @@ router.post("/delete-closure", authenticateAdmin, routeClosureControllers.delete
 router.post("/create-ticket-type", authenticateAdmin, ticketTypeControllers.add_ticket_type);
 router.post("/delete-ticket-type", authenticateAdmin, ticketTypeControllers.delete_ticket_type);
 router.get("/get-all-ticket-type", authenticateAdmin, ticketTypeControllers.get_all_ticket_type);
+router.post("/get-ticket-type-by-routeid", authenticateAdmin, ticketTypeControllers.get_ticket_type_by_routeid);
 router.post("/update-ticket-price", authenticateAdmin, ticketTypeControllers.update_ticket_price);
 
 //==================================== Driver ==============================

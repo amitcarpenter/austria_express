@@ -93,27 +93,74 @@ export const get_all_ticket_type = async (req: Request, res: Response) => {
     }
 };
 
-export const update_ticket_price = async (req: Request, res: Response) => {
+export const get_ticket_type_by_routeid = async (req: Request, res: Response) => {
     try {
         const ticketTypeSchema = Joi.object({
-            ticket_type_id: Joi.number().required(),
-            ticket_type: Joi.string().required(),
-            ticket_price: Joi.number().required(),
+            route_id: Joi.number().required(),
+            stop_id: Joi.number().allow(null, '')
         });
 
         const { error, value } = ticketTypeSchema.validate(req.body);
         if (error) return joiErrorHandle(res, error);
 
-        const { ticket_type_id, ticket_type, ticket_price } = value;
+        const connection = await getConnection();
+        const routeRepository = getRepository(Route);
 
+        const findRoutes = await routeRepository.find({ where: { route_id: value.route_id } });
+        if (!findRoutes.length) return handleSuccess(res, 404, "No routes found for the given route ID", []);
+
+        const newTicketTypes = await Promise.all(
+            findRoutes.map(async (val) => {
+                var ticket_type
+                if (!value.stop_id) {
+                    ticket_type = await connection.query(`SELECT ticket_type.*, start_city.city_name AS start_city_name, end_city.city_name AS end_city_name FROM ticket_type LEFT JOIN city AS start_city ON start_city.city_id = ticket_type.startPointCityId LEFT JOIN city AS end_city ON end_city.city_id = ticket_type.endPointCityId WHERE routeRouteId = ${val.route_id} ORDER BY startPointCityId, endPointCityId ASC;`);
+                } else {
+                    ticket_type = await connection.query(`SELECT ticket_type.*, start_city.city_name AS start_city_name, end_city.city_name AS end_city_name FROM ticket_type LEFT JOIN city AS start_city ON start_city.city_id = ticket_type.startPointCityId LEFT JOIN city AS end_city ON end_city.city_id = ticket_type.endPointCityId WHERE routeRouteId = ${val.route_id} AND ticket_type.startPointCityId = ${value.stop_id} ORDER BY startPointCityId, endPointCityId ASC;`);
+                }
+
+                const ticket_type_column = await connection.query(`SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'ticket_type' AND COLUMN_NAME != 'ticket_type_id' AND COLUMN_NAME != 'is_active' AND COLUMN_NAME != 'is_deleted' AND COLUMN_NAME != 'created_at' AND COLUMN_NAME != 'updated_at' AND COLUMN_NAME != 'routeRouteId' AND COLUMN_NAME != 'startPointCityId' AND COLUMN_NAME != 'endPointCityId'`);
+
+                return { ...val, ticket_type, ticket_type_column }
+            })
+        );
+
+        return handleSuccess(res, 200, "Ticket types retrieved successfully", newTicketTypes);
+    } catch (error: any) {
+        console.log(error);
+        return handleError(res, 500, 'Internal Server Error');
+    }
+};
+
+export const update_ticket_price = async (req: Request, res: Response) => {
+    try {
         const connection = await getConnection();
         const queryRunner = connection.createQueryRunner();
 
         try {
             await queryRunner.connect();
-            const query = `UPDATE ticket_type SET ${ticket_type} = ${ticket_price} WHERE ticket_type_id = ${ticket_type_id}`;
-            await queryRunner.query(query);
-            return handleSuccess(res, 200, `Passenger price updated successfully.`);
+            for (const ticket of req.body) {
+                const updates: string[] = [];
+                const { ticket_type_id, is_active, ...columns } = ticket;
+
+                updates.push(`is_active = ${is_active}`);
+
+                for (const [key, val] of Object.entries(columns)) {
+                    if (val !== undefined) {
+                        const valueToSet = val === null ? 'NULL' : `${val}`;
+                        updates.push(`${key} = ${valueToSet}`);
+                    }
+                }
+
+                const updateQuery = `
+                    UPDATE ticket_type
+                    SET ${updates.join(', ')}
+                    WHERE ticket_type_id = ${ticket_type_id}
+                `;
+
+                await queryRunner.query(updateQuery);
+            }
+
+            return handleSuccess(res, 200, `Ticket prices and statuses updated successfully.`);
         } catch (error) {
             console.error('Error adding column:', error);
             return handleError(res, 500, 'An error occurred while adding the column.');

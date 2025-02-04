@@ -6,7 +6,7 @@ export class SeatManagement {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @ManyToOne(() => Bus, { nullable: false })
+    @ManyToOne(() => Bus, { nullable: false, onDelete: 'CASCADE' })
     bus: Bus;
 
     @Column({ nullable: true })

@@ -13,7 +13,7 @@ export class Ticket {
     @ManyToOne(() => User, { nullable: false })
     passenger: User;
 
-    @ManyToOne(() => Bus, { nullable: false })
+    @ManyToOne(() => Bus, { nullable: false, onDelete: 'CASCADE' })
     bus: Bus;
 
     @Column({ type: 'integer' })

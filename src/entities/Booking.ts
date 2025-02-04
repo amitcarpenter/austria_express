@@ -11,10 +11,10 @@ export class Booking {
     @ManyToOne(() => SeatManagement, { nullable: false })
     seat: SeatManagement;
 
-    @ManyToOne(() => Bus, { nullable: false })
+    @ManyToOne(() => Bus, { nullable: false, onDelete: 'CASCADE' })
     bus: Bus;
 
-    @ManyToOne(() => Route, { nullable: false })
+    @ManyToOne(() => Route, { nullable: false, onDelete: 'CASCADE' })
     route: Route;
 
     @Column()

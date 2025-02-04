@@ -101,7 +101,7 @@ export const get_driver_by_id = async (req: Request, res: Response) => {
         if (error) return joiErrorHandle(res, error);
         const { driver_id } = value;
         const driverRepository = getRepository(Driver);
-        const driver = await driverRepository.findOneBy({ driver_id: driver_id });
+        const driver = await driverRepository.findOneBy({ driver_id: driver_id, is_deleted: false });
         if (!driver) return handleError(res, 404, "Driver not found.");
         driver.driver_profile_picture = driver.driver_profile_picture != null ? APP_URL + driver.driver_profile_picture : driver.driver_profile_picture
         return handleSuccess(res, 200, "Driver fetched successfully.", driver);
@@ -133,7 +133,7 @@ export const update_driver = async (req: Request, res: Response) => {
         const { driver_id, driver_name, driver_license_number, driver_contact_number, driver_address, driver_dob } = value
 
         const driverRepository = getRepository(Driver);
-        const driver = await driverRepository.findOneBy({ driver_id: driver_id });
+        const driver = await driverRepository.findOneBy({ driver_id: driver_id, is_deleted: false });
         if (!driver) return handleError(res, 404, "Driver not found.");
 
         const duplicateDriver = await driverRepository.findOne({
@@ -198,11 +198,10 @@ export const delete_driver = async (req: Request, res: Response) => {
         const { driver_id } = value;
         const driverRepository = getRepository(Driver);
 
-        const driver = await driverRepository.findOneBy({ driver_id: driver_id });
+        const driver = await driverRepository.findOneBy({ driver_id: driver_id, is_deleted: false });
         if (!driver) return handleError(res, 404, "Driver not found or already deleted.");
 
         if (driver) driver.is_deleted = true;
-
         await driverRepository.save(driver);
 
         return handleSuccess(res, 200, "Driver Deleted Successfully.");

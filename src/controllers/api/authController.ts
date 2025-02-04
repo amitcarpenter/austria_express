@@ -144,22 +144,21 @@ export const login_user = async (req: Request, res: Response) => {
       return handleError(res, 400, error.details[0].message);
     }
     const { email, password } = value;
-    let lower_email = email.toLowerCase()
-    const userRepository = getRepository(User);
-    const roleRepository = getRepository(Role);
-    const user = await userRepository.findOneBy({ email: lower_email });
-    if (!user) {
-      return handleError(res, 404, "User Not Found.");
-    }
-    const verifyToken = crypto.randomBytes(32).toString('hex');
-    const verifyTokenExpiry = new Date(Date.now() + 3600000);
+    const lower_email = email.toLowerCase()
 
-    if (user.is_verified === false) {
-      return handleError(res, 400, "Please Verify your email first")
+    const userRepository = getRepository(User);
+    const user = await userRepository.findOneBy({ email: lower_email });
+
+    if (!user) {
+      return handleError(res, 404, "Invalid email address. Please check and try again.");
     }
 
     if (!user.password) {
-      return handleError(res, 400, "Invalid credentials");
+      return handleError(res, 400, "Invalid password. Please check and try again.");
+    }
+
+    if (user.is_verified === false) {
+      return handleError(res, 400, "Your account is not verified. Please check your email for the verification link.")
     }
 
     if (!user.is_active) {
@@ -170,17 +169,18 @@ export const login_user = async (req: Request, res: Response) => {
       return handleError(res, 400, "Your Account has been blocked by admin.");
     }
 
-
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return handleError(res, 400, "Invalid credentials")
+      return handleError(res, 400, "Invalid password. Please try again.")
 
     }
 
     const payload = { userId: user.id, email: user.email };
     const token = generateAccessToken(payload);
+
     user.jwt_token = token;
     await userRepository.save(user);
+    
     return handleSuccess(res, 200, "Login Successful.", token)
   } catch (error: any) {
     return handleError(res, 500, error.message);
@@ -429,7 +429,7 @@ export const guest_login = async (req: Request, res: Response) => {
     const newUser = userRepository.create({
       guest_user: guestID,
       email: `${guestID}@gmail.com`,
-      signup_method: 'guest',
+      signup_method: 'Guest',
       is_verified: true
     });
     await userRepository.save(newUser);

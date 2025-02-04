@@ -7,10 +7,10 @@ export class SeatAvailability {
     @PrimaryGeneratedColumn()
     id: number;
 
-    @ManyToOne(() => Route, { nullable: false })
+    @ManyToOne(() => Route, { nullable: false, onDelete: 'CASCADE' })
     route: Route;
 
-    @ManyToOne(() => SeatManagement, { nullable: false })
+    @ManyToOne(() => SeatManagement, { nullable: false, onDelete: 'CASCADE' })
     seat: SeatManagement;
 
     @Column({ type: 'timestamp', nullable: false })

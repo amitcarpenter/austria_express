@@ -1,20 +1,17 @@
 import { Request, Response } from "express";
-import Joi from "joi";
-import { getRepository, Like, Not } from "typeorm";
+import Joi, { not } from "joi";
+import { getRepository, In, Like, Not, getConnection } from "typeorm";
 import { handleSuccess, handleError, joiErrorHandle } from "../../utils/responseHandler";
 import { Route } from "../../entities/Route";
-import { City } from "../../entities/City";
 import { TicketType } from "../../entities/TicketType";
 import { Route_Stops } from "../../entities/RouteStop";
-import { distance_checker } from "../../utils/function";
 
 export const create_route = async (req: Request, res: Response) => {
     try {
         const createRouteSchema = Joi.object({
-            route_direction: Joi.string().required(),
             title: Joi.string().required(),
-            description: Joi.string().optional(),
-            route_stops: Joi.array().items(Joi.number()).optional(),
+            description: Joi.string().required().allow(""),
+            route_stops: Joi.string().required(),
         });
 
         const { error, value } = createRouteSchema.validate(req.body);
@@ -24,48 +21,42 @@ export const create_route = async (req: Request, res: Response) => {
         const routeStopsRepository = getRepository(Route_Stops);
         const ticketTypeRepository = getRepository(TicketType);
 
+        value.route_stops = value.route_stops.split(',').map(Number);
+
+        const duplicateRoute = await routeRepository.findOne({ where: { title: value.title, is_deleted: false } });
+        if (duplicateRoute) return handleError(res, 400, "This route/line title already exists. Please add a different route title.");
+
         const newRoute = routeRepository.create(value);
         await routeRepository.save(newRoute);
 
-        if (value.route_stops) {
+        if (value.route_stops.length > 0) {
             for (let i = 0; i < value.route_stops.length; i++) {
                 const stop_city_id = value.route_stops[i];
                 const newStopData: any = {
                     route: newRoute,
                     stop_city: stop_city_id,
                     stop_order: i + 1,
-                    arrival_time: null,
-                    stop_time: null,
-                    departure_time: null
+                    arrival_time: i === 0 ? null : '',
+                    departure_time: i === value.route_stops.length - 1 ? null : '',
+                    stop_time: i === 0 || i === value.route_stops.length - 1 ? null : '',
                 };
-                if (i == 0) {
-                    newStopData.arrival_time = null;
-                    newStopData.departure_time = '';
-                } else if (i === value.route_stops.length - 1) {
-                    newStopData.arrival_time = '';
-                    newStopData.departure_time = null;
-                } else {
-                    newStopData.arrival_time = '';
-                    newStopData.stop_time = '';
-                    newStopData.departure_time = '';
-                }
+
                 const newStop = routeStopsRepository.create(newStopData);
                 await routeStopsRepository.save(newStop);
-                for (let j = 0; j < value.route_stops.length; j++) {
-                    if (value.route_stops[j + 1] && value.route_stops[i] != value.route_stops[j + 1] && value.route_stops[i] < value.route_stops[j + 1]) {
-                        const newTicketTypes: any = {
-                            route: newRoute,
-                            start_point: value.route_stops[i],
-                            end_point: value.route_stops[j + 1],
-                        }
-                        const newStop = ticketTypeRepository.create(newTicketTypes);
-                        await ticketTypeRepository.save(newStop);
-                    }
+
+                for (let j = i + 1; j < value.route_stops.length; j++) {
+                    const newTicketTypes: any = {
+                        route: newRoute,
+                        start_point: value.route_stops[i],
+                        end_point: value.route_stops[j],
+                    };
+                    const newTicketType = ticketTypeRepository.create(newTicketTypes);
+                    await ticketTypeRepository.save(newTicketType);
                 }
             }
         }
 
-        return handleSuccess(res, 200, "Route Created Successfully.");
+        return handleSuccess(res, 200, "Route/Line Created Successfully.");
     } catch (error: any) {
         console.error("Error in create_route:", error);
         return handleError(res, 500, error.message);
@@ -92,6 +83,20 @@ export const get_all_routes = async (req: Request, res: Response) => {
         );
 
         return handleSuccess(res, 200, "Routes fetched successfully.", routesWithStops);
+    } catch (error: any) {
+        console.error("Error in get_all_routes:", error);
+        return handleError(res, 500, error.message);
+    }
+};
+
+export const get_all_active_routes = async (req: Request, res: Response) => {
+    try {
+        const routeRepository = getRepository(Route);
+
+        const routes = await routeRepository.find({ where: { is_deleted: false, is_active: true } });
+        if (!routes.length) return handleError(res, 404, 'No routes found.');
+
+        return handleSuccess(res, 200, "Routes fetched successfully.", routes);
     } catch (error: any) {
         console.error("Error in get_all_routes:", error);
         return handleError(res, 500, error.message);
@@ -160,11 +165,19 @@ export const get_route_by_id = async (req: Request, res: Response) => {
 
         const { route_id } = value;
         const routeRepository = getRepository(Route);
-        const route = await routeRepository.findOne({ where: { route_id: route_id }, relations: ['pickup_point', 'dropoff_point'] });
+        const routeStopsRepository = getRepository(Route_Stops);
 
+        const route = await routeRepository.findOne({ where: { route_id, is_deleted: false } });
         if (!route) return handleError(res, 404, "Route not found.");
 
-        return handleSuccess(res, 200, "Route fetched successfully.", route);
+        const routeStops = await routeStopsRepository.find({
+            where: { route: { route_id: route_id } },
+            relations: ["stop_city"],
+            order: { stop_order: "ASC" },
+        });
+        const routeWithStops = { ...route, route_stops: routeStops };
+
+        return handleSuccess(res, 200, "Route fetched successfully.", routeWithStops);
     } catch (error: any) {
         console.error("Error in get_route_by_id:", error);
         return handleError(res, 500, error.message);
@@ -175,81 +188,113 @@ export const update_route = async (req: Request, res: Response) => {
     try {
         const updateRouteSchema = Joi.object({
             route_id: Joi.number().required(),
-            route_direction: Joi.string().required(),
-            pickup_point: Joi.string().required(),
-            dropoff_point: Joi.string().required(),
-            stop_city_ids: Joi.array().items(Joi.string()).required(),
-            description: Joi.string().optional(),
+            title: Joi.string().required(),
+            description: Joi.string().required().allow(""),
+            route_stops: Joi.string().required(),
+            is_active: Joi.boolean().optional(),
         });
 
         const { error, value } = updateRouteSchema.validate(req.body);
         if (error) return joiErrorHandle(res, error);
 
-        const { route_id, route_direction, pickup_point, dropoff_point, stop_city_ids, description } = value;
-
         const routeRepository = getRepository(Route);
-        const cityRepository = getRepository(City);
         const routeStopsRepository = getRepository(Route_Stops);
+        const ticketTypeRepository = getRepository(TicketType);
+        value.route_stops = value.route_stops.split(',').map(Number);
 
-        const route = await routeRepository.findOne({ where: { route_id: route_id } });
+        const route = await routeRepository.findOne({ where: { route_id: value.route_id, is_deleted: false } });
         if (!route) return handleError(res, 404, "Route not found.");
 
-        // const existingRoute = await routeRepository.findOne({
-        //     where: {
-        //         pickup_point,
-        //         dropoff_point,
-        //         route_id: Not(route_id)
-        //     },
-        // });
-        // if (existingRoute) return handleError(res, 409, "A route with the same pickup and dropoff points already exists.");
+        const duplicateRoute = await routeRepository.findOne({ where: { title: value.title, route_id: Not(value.route_id), is_deleted: false } });
+        if (duplicateRoute) return handleError(res, 400, "This route/line title already exists. Please add a different route title.");
 
-        const findPickupCityResult = await cityRepository.findOne({ where: { city_id: pickup_point } });
-        if (!findPickupCityResult) return handleError(res, 404, "Pickup city not found.");
+        let isRouteUpdated = false;
+        if (
+            route.title !== value.title ||
+            route.description !== value.description ||
+            route.is_active !== value.is_active
+        ) {
+            route.title = value.title;
+            route.description = value.description || route.description;
+            route.is_active = value.is_active ?? route.is_active;
+            await routeRepository.save(route);
+            isRouteUpdated = true;
+        }
 
-        const findDropoffCityResult = await cityRepository.findOne({ where: { city_id: dropoff_point } });
-        if (!findDropoffCityResult) return handleError(res, 404, "Dropoff city not found.");
+        const existingStops = await routeStopsRepository.find({
+            where: { route: value.route_id },
+            relations: ["stop_city"],
+            order: { stop_order: "ASC" },
+        });
 
-        let distance_km;
-        if (findPickupCityResult && findDropoffCityResult) {
-            // Calculate the distance if coordinates are provided
-            const units = 'metric';
-            const distances: any = await distance_checker(units, `${findPickupCityResult.latitude},${findPickupCityResult.longitude}`, `${findDropoffCityResult.latitude},${findDropoffCityResult.longitude}`);
+        let isStopsUpdated = false;
+        for (let i = 0; i < value.route_stops.length; i++) {
+            const stop_city_id = value.route_stops[i];
+            const existingStop = existingStops.find(stop => stop.stop_city.city_id === stop_city_id);
+            if (!existingStop) {
+                const stopData: any = {
+                    route: route,
+                    stop_city: stop_city_id,
+                    stop_order: i + 1,
+                    arrival_time: i === 0 ? null : existingStops[i]?.arrival_time || "",
+                    stop_time: i === 0 || i === value.route_stops.length - 1 ? null : existingStops[i]?.stop_time || "",
+                    departure_time: i === value.route_stops.length - 1 ? null : existingStops[i]?.departure_time || "",
+                };
 
-            if (!distances || !distances.distanceValue) {
-                return handleError(res, 400, "Unable to calculate distance. Please check the input coordinates.");
+                const newStop = routeStopsRepository.create(stopData);
+                await routeStopsRepository.save(newStop);
+                isStopsUpdated = true;
+            } else {
+                if (existingStop.stop_order !== i + 1) {
+                    existingStop.stop_order = i + 1;
+                    isStopsUpdated = true;
+                }
+                await routeStopsRepository.save(existingStop);
             }
-
-            distance_km = parseFloat((distances.distanceValue / 1000).toFixed(2)); // Convert meters to kilometers
         }
 
-        // if (route_direction) route.route_direction = route_direction
-        // if (pickup_point) route.pickup_point = pickup_point
-        // if (dropoff_point) route.dropoff_point = dropoff_point
-        // if (distance_km) route.distance_km = distance_km
-        // if (description) route.description = description
+        const findAndCountStops = await routeStopsRepository.find({
+            where: { route: value.route_id },
+            relations: ["stop_city"],
+            order: { stop_order: "ASC" },
+        });
 
-        await routeRepository.save(route);
-        await routeStopsRepository.delete({ route: { route_id: route_id } });
+        for (let i = 0; i < value.route_stops.length; i++) {
+            for (let j = i + 1; j < value.route_stops.length; j++) {
+                const startStop = value.route_stops[i];
+                const endStop = value.route_stops[j];
+                if (startStop !== endStop) {
+                    const existingTicketType = await ticketTypeRepository.findOne({
+                        where: {
+                            route: { route_id: route.route_id },
+                            start_point: { city_id: startStop },
+                            end_point: { city_id: endStop },
+                        },
+                    });
 
-        for (let i = 0; i < stop_city_ids.length; i++) {
-            const stop_city_id = stop_city_ids[i];
+                    if (!existingTicketType) {
+                        const newTicketType: any = {
+                            route: route,
+                            start_point: startStop,
+                            end_point: endStop,
+                        };
 
-            // Fetch the full Route entity for the relation
-            const routeEntity = await routeRepository.findOne({ where: { route_id: route_id } });
-            if (!routeEntity) return handleError(res, 404, "Route not found.");
-
-            // Create a new stop entry for the route
-            const newStopData = {
-                route_id: routeEntity,  // Pass the entire Route entity instead of just the route_id
-                stop_city_id,
-                stop_order: i + 1 // Order the stops starting from 1
-            };
-
-            const newStop = routeStopsRepository.create(newStopData);
-            await routeStopsRepository.save(newStop);
+                        const ticketType = ticketTypeRepository.create(newTicketType);
+                        await ticketTypeRepository.save(ticketType);
+                    }
+                }
+            }
         }
 
-        return handleSuccess(res, 200, "Route Updated Successfully.");
+        if (isRouteUpdated && isStopsUpdated) {
+            return handleSuccess(res, 200, "Route and stops updated successfully.");
+        } else if (isRouteUpdated) {
+            return handleSuccess(res, 200, "Route updated successfully.");
+        } else if (isStopsUpdated) {
+            return handleSuccess(res, 200, "Route stops updated successfully.");
+        } else {
+            return handleSuccess(res, 200, "No changes made.");
+        }
     } catch (error: any) {
         console.error("Error in update_route:", error);
         return handleError(res, 500, error.message);
@@ -268,8 +313,9 @@ export const update_route_status = async (req: Request, res: Response) => {
 
         const { route_id, is_active } = value;
         const routeRepository = getRepository(Route);
-        const route = await routeRepository.findOneBy({ route_id: route_id });
+        const route = await routeRepository.findOneBy({ route_id: route_id, is_deleted: false });
         if (!route) return handleError(res, 404, "Route not found.");
+
         let response_message = 'Route Activated Successfully '
         if (!is_active) response_message = 'Route De-activated Successfully'
         route.is_deleted = is_active
@@ -293,20 +339,118 @@ export const delete_route = async (req: Request, res: Response) => {
 
         const { route_id } = value;
         const routeRepository = getRepository(Route);
-        const ticketTypeRepository = getRepository(TicketType);
 
-        const route = await routeRepository.findOne({ where: { route_id: route_id } });
-        const ticketRoute = await ticketTypeRepository.findOne({ where: { route: route_id } });
+        const route = await routeRepository.findOne({ where: { route_id: route_id, is_deleted: false } });
 
         if (!route) return handleError(res, 404, "Route not found or already deleted.");
 
         if (route) route.is_deleted = true
         await routeRepository.save(route);
-        if (ticketRoute) await ticketTypeRepository.save(ticketRoute);
 
         return handleSuccess(res, 200, "Route Deleted Successfully.");
     } catch (error: any) {
         console.error("Error in delete_route:", { error: error.message, route_id: req.body?.route_id });
+        return handleError(res, 500, error.message);
+    }
+};
+
+export const update_departuretime = async (req: Request, res: Response) => {
+    try {
+        const ticketTypeSchema = Joi.array().items(
+            Joi.object({
+                stop_id: Joi.number().required(),
+                ...Object.fromEntries(
+                    ['arrival_time', 'stop_time', 'departure_time'].map(field => [
+                        field, Joi.string().allow(null)
+                    ])
+                ),
+            })
+        );
+
+        const { error, value } = ticketTypeSchema.validate(req.body);
+        if (error) return joiErrorHandle(res, error);
+
+        const routeStopsRepository = getRepository(Route_Stops);
+
+        for (const val of value) {
+            const updateFields: Partial<Route_Stops> = {};
+
+            if (val.arrival_time !== null) updateFields.arrival_time = val.arrival_time;
+            if (val.stop_time !== null) updateFields.stop_time = val.stop_time;
+            if (val.departure_time !== null) updateFields.departure_time = val.departure_time;
+
+            await routeStopsRepository.update(
+                { stop_id: val.stop_id },
+                updateFields
+            );
+        }
+
+        return handleSuccess(res, 200, "Departure times updated successfully");
+    } catch (error: any) {
+        console.error("Error in update_departuretime_routeid:", error);
+        return handleError(res, 500, error.message);
+    }
+};
+
+export const create_copy_route = async (req: Request, res: Response) => {
+    try {
+        const createReverseRouteSchema = Joi.object({
+            route_id: Joi.number().required(),
+        });
+
+        const { error, value } = createReverseRouteSchema.validate(req.body);
+        if (error) return joiErrorHandle(res, error);
+
+        const connection = await getConnection();
+        const routeRepository = getRepository(Route);
+        const routeStopsRepository = getRepository(Route_Stops);
+
+        const existingRoute = await routeRepository.findOne({ where: { route_id: value.route_id, is_deleted: false } });
+        if (!existingRoute) return handleError(res, 404, 'Route not found.');
+
+        const routeStops = await routeStopsRepository.find({ where: { route: { route_id: existingRoute.route_id } }, order: { stop_order: "ASC" }, relations: ['stop_city'] });
+
+        const newRoute = routeRepository.create({
+            title: existingRoute.title,
+            description: existingRoute.description
+        });
+        await routeRepository.save(newRoute);
+
+        newRoute.title = `${newRoute.title} Copy ${newRoute.route_id}`;
+        await routeRepository.save(newRoute);
+
+        for (let i = 0; i < routeStops.length; i++) {
+            const newStopData = {
+                route: newRoute,
+                stop_city: routeStops[i].stop_city,
+                stop_order: i + 1,
+                arrival_time: routeStops[i].arrival_time,
+                departure_time: routeStops[i].departure_time,
+                stop_time: routeStops[i].stop_time,
+            };
+
+            const newStop = routeStopsRepository.create(newStopData);
+            await routeStopsRepository.save(newStop);
+        }
+
+        const existingTicketTypes = await connection.query('SELECT * FROM `ticket_type` WHERE routeRouteId = ? ORDER BY ticket_type_id ASC;', [existingRoute.route_id])
+
+        for (const ticketType of existingTicketTypes) {
+            delete ticketType.ticket_type_id
+            delete ticketType.is_active
+            delete ticketType.routeRouteId
+            delete ticketType.is_deleted
+            delete ticketType.created_at
+            delete ticketType.updated_at
+
+            ticketType.routeRouteId = newRoute.route_id
+
+            await connection.query(`INSERT INTO ticket_type SET ?`, [ticketType]);
+        }
+
+        return handleSuccess(res, 200, "Route/Line copied successfully.");
+    } catch (error: any) {
+        console.error("Error in create_copy_route:", error);
         return handleError(res, 500, error.message);
     }
 };

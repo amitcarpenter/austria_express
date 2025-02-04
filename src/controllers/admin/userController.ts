@@ -1,11 +1,10 @@
-import Joi, { not } from "joi";
+import Joi from "joi";
 import dotenv from "dotenv";
 import { Request, Response } from "express";
 import { User } from "../../entities/User";
 import { getRepository, Like, Not } from "typeorm";
 import { handleError, handleSuccess, joiErrorHandle } from "../../utils/responseHandler";
 import { crudHandler } from "../../utils/crudHandler";
-import { notEqual } from "assert";
 
 dotenv.config();
 
@@ -35,9 +34,9 @@ export const get_all_user_list = async (req: Request, res: Response) => {
 
         if (filter) {
             if (filter == 'Guest User') {
-                whereConditions.push({ signup_method: 'guest', is_verified: true });
+                whereConditions.push({ signup_method: 'Guest', is_verified: true });
             } else {
-                whereConditions.push({ signup_method: Not('guest'), is_verified: true });
+                whereConditions.push({ signup_method: Not('Guest'), is_verified: true });
             }
         }
 

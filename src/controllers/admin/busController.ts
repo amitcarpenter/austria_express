@@ -51,7 +51,7 @@ export const create_bus = async (req: Request, res: Response) => {
 export const get_all_buses = async (req: Request, res: Response) => {
     try {
         const busRepository = getRepository(Bus);
-        const buses = await busRepository.find({ where: { is_deleted: false } });
+        const buses = await busRepository.find({ where: { is_deleted: false, is_active: true } });
         return handleSuccess(res, 200, "Buses fetched successfully.", buses);
     } catch (error: any) {
         console.error("Error in get_all_buses:", error);
@@ -113,7 +113,8 @@ export const update_bus = async (req: Request, res: Response) => {
 
         const busRepository = getRepository(Bus);
         const { bus_id, bus_name, bus_number_plate, bus_registration_number, number_of_seats } = value;
-        const bus = await busRepository.findOneBy({ bus_id: bus_id });
+
+        const bus = await busRepository.findOneBy({ bus_id: bus_id, is_deleted: false });
         if (!bus) return handleError(res, 404, "Bus not found.");
 
         const duplicateBus = await busRepository.findOne({
@@ -154,13 +155,13 @@ export const update_bus_status = async (req: Request, res: Response) => {
 
         const busRepository = getRepository(Bus);
         const { bus_id, is_active } = value;
-        const bus = await busRepository.findOneBy({ bus_id: bus_id });
-        if (!bus) return handleError(res, 404, "Bus not found.");
 
+        const bus = await busRepository.findOneBy({ bus_id: bus_id, is_deleted: false });
+        if (!bus) return handleError(res, 404, "Bus not found.");
 
         let response_message = 'Bus Activated Successfully '
         if (!is_active) response_message = 'Bus De-activated Successfully'
-        bus.is_deleted = is_active
+        bus.is_active = is_active
 
         await busRepository.save(bus);
 
@@ -183,11 +184,11 @@ export const delete_bus = async (req: Request, res: Response) => {
         const { bus_id } = value;
 
         const busRepository = getRepository(Bus);
-        const bus = await busRepository.findOneBy({ bus_id: bus_id });
+
+        const bus = await busRepository.findOneBy({ bus_id: bus_id, is_deleted: false });
         if (!bus) return handleError(res, 404, "Bus not found or already deleted.");
 
         if (bus) bus.is_deleted = true;
-
         await busRepository.save(bus);
 
         return handleSuccess(res, 200, "Bus Deleted Successfully.");

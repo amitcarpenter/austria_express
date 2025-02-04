@@ -20,6 +20,9 @@ export class Bus {
     @Column({ type: 'enum', enum: ['Sleeper', 'Seater', 'AC', 'Non-AC'], default: 'Seater' })
     bus_type: string;
 
+    @Column({ type: 'boolean', default: true })
+    is_active: boolean;
+
     @Column({ type: 'boolean', default: false })
     is_deleted: boolean;
 

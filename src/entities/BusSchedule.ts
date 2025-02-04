@@ -2,39 +2,41 @@ import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, Up
 import { Bus } from './Bus';
 import { Route } from './Route';
 import { Driver } from './Driver';
-import { Terminal } from './Terminal'
 
 @Entity()
 export class BusSchedule {
     @PrimaryGeneratedColumn()
     schedule_id: number;
 
-    @ManyToOne(() => Bus, { nullable: false })
+    @ManyToOne(() => Bus, { nullable: false, onDelete: 'CASCADE' })
     bus: Bus;
 
-    @ManyToOne(() => Route, { nullable: false })
+    @ManyToOne(() => Route, { nullable: false, onDelete: 'CASCADE' })
     route: Route;
 
-    @ManyToOne(() => Driver, { nullable: false })
+    @ManyToOne(() => Driver, { nullable: true, onDelete: 'CASCADE' })
     driver: Driver;
 
-    @Column({ type: 'time', nullable: false })
-    departure_time: string;
+    @Column({ type: 'boolean', default: true })
+    available: boolean;
 
-    @Column({ type: 'time', nullable: false })
-    arrival_time: string;
+    @Column({ type: 'date', nullable: true })
+    from: Date;
 
-    @Column({ type: 'time', nullable: true })
-    duration_time: string;
-
-    @Column({ nullable: true })
-    no_of_days: string;
+    @Column({ type: 'date', nullable: true })
+    to: Date;
 
     @Column({ type: 'enum', enum: ['Daily', 'Weekly', 'Custom'], default: 'Daily' })
     recurrence_pattern: string;
 
     @Column({ nullable: true })
     days_of_week: string;
+
+    @Column({ type: 'boolean', default: true })
+    is_active: boolean;
+
+    @Column({ type: 'boolean', default: false })
+    is_deleted: boolean;
 
     @CreateDateColumn()
     created_at: Date;

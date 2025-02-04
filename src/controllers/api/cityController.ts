@@ -42,7 +42,7 @@ export const searchCitiesByCountry = async (req: Request, res: Response) => {
 
         const cityRepository = getRepository(City);
 
-        const cityResult = await cityRepository.find({ where: { country_name: country_name, city_name: ILike(`${city_name}%`) } });
+        const cityResult = await cityRepository.find({ where: { city_name: ILike(`${city_name}%`) } });
 
         if (!cityResult) return handleError(res, 404, 'Not cities found');
 

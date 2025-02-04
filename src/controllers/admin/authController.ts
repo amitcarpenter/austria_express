@@ -137,24 +137,31 @@ export const login_admin = async (req: Request, res: Response) => {
     if (error) {
       return handleError(res, 400, error.details[0].message);
     }
+
     const { email, password } = value;
+
     const adminRepository = getRepository(Admin);
     const admin = await adminRepository.findOneBy({ email });
+
     if (!admin) {
-      return handleError(res, 404, "Admin Not Found.");
+    return handleError(res, 404, "Admin not found. Please check the email and try again.");
+    }
+    
+    const isMatch = await bcrypt.compare(password, admin.password);
+    if (!isMatch) {
+      return handleError(res, 400, "Incorrect password. Please try again.")
     }
 
     if (admin.is_verified == false) {
-      return handleError(res, 400, "Please Verify your email first")
+      return handleError(res, 400, "Your email is not verified. Please check your inbox for the verification link.")
     }
-    const isMatch = await bcrypt.compare(password, admin.password);
-    if (!isMatch) {
-      return handleError(res, 400, "Invalid credentials")
-    }
+
     const payload = { adminId: admin.id, email: admin.email };
     const token = generateAccessToken(payload);
+
     admin.jwt_token = token;
     await adminRepository.save(admin);
+    
     return handleSuccess(res, 200, "Login Successful.", token)
   } catch (error: any) {
     return handleError(res, 500, error.message);

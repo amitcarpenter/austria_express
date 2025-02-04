@@ -16,13 +16,13 @@ export class Route_Stops {
     @Column({ type: 'integer', nullable: false })
     stop_order: number;
 
-    @Column({ type: 'time', nullable: true })
+    @Column({ nullable: true })
     arrival_time: string;
 
-    @Column({ type: 'time', nullable: true })
+    @Column({ nullable: true })
     stop_time: string;
 
-    @Column({ type: 'time', nullable: true })
+    @Column({ nullable: true })
     departure_time: string;
 
     @Column({ type: 'boolean', default: true })

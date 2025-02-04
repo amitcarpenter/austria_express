@@ -41,7 +41,7 @@ router.post("/cities-countries-search", cityControllers.searchCitiesByCountry);
 
 
 //======================== Cities ======================================
-router.get("/get-all-city", cityControllersAdmin.getAllCity);
+router.get("/get-all-city", cityControllersAdmin.getAllActiveCity);
 
 
 export default router;

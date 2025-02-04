@@ -3,13 +3,13 @@ import { Request, Response } from "express";
 import { getRepository, Like, Not } from "typeorm";
 import { handleSuccess, handleError, joiErrorHandle } from "../../utils/responseHandler";
 import { City } from "../../entities/City";
-import { Terminal } from "../../entities/Terminal";
 import { get_lat_long } from "../../utils/function";
+
+const APP_URL = process.env.APP_URL as string;
 
 export const createCity = async (req: Request, res: Response) => {
     try {
         const createCitySchema = Joi.object({
-            country_name: Joi.string().optional(),
             city_name: Joi.string().required(),
             city_address: Joi.string().required()
         });
@@ -19,13 +19,15 @@ export const createCity = async (req: Request, res: Response) => {
 
         const cityRepository = getRepository(City);
 
+        const duplicateCity = await cityRepository.findOne({ where: { city_name: value.city_name, is_deleted: false } });
+        if (duplicateCity) return handleError(res, 400, "This bus stop already exists. Please add a different stop.");
+
         const latLong = await get_lat_long(value.city_address);
-        if (!latLong || !latLong.lat || !latLong.lng) {
-            return handleError(res, 400, "Invalid city address. Could not fetch latitude and longitude.");
-        }
+        if (!latLong || !latLong.lat || !latLong.lng) return handleError(res, 400, "Invalid city address. Could not fetch latitude and longitude.");
 
         const newCityData = {
-            ...value,
+            city_name: value.city_name,
+            city_address: value.city_address,
             latitude: latLong.lat,
             longitude: latLong.lng
         };
@@ -33,7 +35,7 @@ export const createCity = async (req: Request, res: Response) => {
         const newCity = cityRepository.create(newCityData);
         await cityRepository.save(newCity);
 
-        return handleSuccess(res, 201, "City created successfully.");
+        return handleSuccess(res, 201, "Bus stop added successfully.");
     } catch (error: any) {
         console.error("Error in createCity:", error);
         return handleError(res, 500, "An error occurred while creating the city.");
@@ -44,11 +46,36 @@ export const getAllCity = async (req: Request, res: Response) => {
     try {
         const cityRepository = getRepository(City);
 
-        const cityResult = await cityRepository.find();
+        const cityResult = await cityRepository.find({ where: { is_deleted: false } });
 
-        if (!cityResult) return handleError(res, 404, 'No cities found');
+        if (!cityResult) return handleError(res, 404, 'No bus stops found.');
 
-        return handleSuccess(res, 200, 'Cities found successfully', cityResult);
+        return handleSuccess(res, 200, 'Bus stops retrieved successfully.', cityResult);
+    } catch (error: any) {
+        console.error("Error in getAllCity:", error);
+        return handleError(res, 500, error.message);
+    }
+};
+
+export const getCityById = async (req: Request, res: Response) => {
+    try {
+        const citySchema = Joi.object({
+            city_id: Joi.number().required(),
+        });
+
+        const { error, value } = citySchema.validate(req.query);
+        if (error) return joiErrorHandle(res, error);
+
+        const { city_id } = value;
+
+        const cityRepository = getRepository(City);
+
+        const cityResult = await cityRepository.findOne({ where: { city_id: city_id, is_deleted: false } });
+        if (!cityResult) return handleError(res, 404, 'Bus stop not found.');
+
+        cityResult.city_image = cityResult.city_image == null ? `${APP_URL}/uploads/${cityResult.city_image}` : '';
+
+        return handleSuccess(res, 200, 'Bus stop retrieved successfully.', cityResult);
     } catch (error: any) {
         console.error("Error in getAllCity:", error);
         return handleError(res, 500, error.message);
@@ -59,35 +86,42 @@ export const updateCity = async (req: Request, res: Response) => {
     try {
         const updateCitySchema = Joi.object({
             city_id: Joi.number().required(),
-            country_name: Joi.string().required(),
-            city_name: Joi.string().required()
+            city_name: Joi.string().required(),
+            city_description: Joi.string().optional().allow(null, ''),
+            city_address: Joi.string().required(),
+            latitude: Joi.number().precision(7).required(),
+            longitude: Joi.number().precision(7).required(),
+            from_ukraine: Joi.boolean().required(),
+            is_active: Joi.boolean().required(),
         });
 
         const { error, value } = updateCitySchema.validate(req.body);
         if (error) return joiErrorHandle(res, error);
 
-        const { city_id, country_name, city_name } = value;
+        const { city_id, city_name, city_description, city_address, latitude, longitude, from_ukraine, is_active } = value;
 
         const cityRepository = getRepository(City);
 
-        const cityResult = await cityRepository.findOne({ where: { city_id: city_id } });
+        const cityResult = await cityRepository.findOne({ where: { city_id: city_id, is_deleted: false } });
+        if (!cityResult) return handleError(res, 404, 'Bus stop not found.');
 
-        if (!cityResult) return handleError(res, 404, 'City not found');
+        const duplicateCity = await cityRepository.findOne({ where: { city_name, city_id: Not(city_id), is_deleted: false } });
+        if (duplicateCity) return handleError(res, 400, "This bus stop already exists. Please add a different stop.");
 
-        const existingCity = await cityRepository.find({ where: { city_name: city_name } });
+        Object.assign(cityResult, {
+            city_name,
+            city_description,
+            city_address,
+            latitude,
+            longitude,
+            from_ukraine,
+            is_active,
+            city_image: req.file ? req.file.filename : cityResult.city_image,
+        });
 
-        if (existingCity && (existingCity.length > 1 || existingCity.length == 1 && existingCity[0].city_id != city_id)) return handleError(res, 400, 'City name already exists');
+        await cityRepository.save(cityResult);
 
-        // const latLong = await get_lat_long(country_name, city_name)
-
-        // cityResult.country_name = country_name;
-        // cityResult.city_name = city_name;
-        // cityResult.latitude = latLong.lat;
-        // cityResult.longitude = latLong.lng;
-
-        // await cityRepository.save(cityResult);
-
-        return handleSuccess(res, 200, 'City updated successfully');
+        return handleSuccess(res, 200, 'Bus stop updated successfully.');
     } catch (error: any) {
         console.error("Error in updateCity:", error);
         return handleError(res, 500, error.message);
@@ -107,11 +141,11 @@ export const deleteCityById = async (req: Request, res: Response) => {
 
         const cityRepository = getRepository(City);
 
-        const cityResult = await cityRepository.findOne({ where: { city_id: city_id } });
+        const cityResult = await cityRepository.findOne({ where: { city_id: city_id, is_deleted: false } });
 
         if (!cityResult) return handleError(res, 404, 'City not found or already deleted');
 
-        const cityDeleteResult = await cityRepository.delete(city_id)
+        cityResult.is_deleted = true;
 
         return handleSuccess(res, 200, 'City deleted successfully');
     } catch (error: any) {
@@ -120,224 +154,17 @@ export const deleteCityById = async (req: Request, res: Response) => {
     }
 };
 
-export const getCityByCountryName = async (req: Request, res: Response) => {
+export const getAllActiveCity = async (req: Request, res: Response) => {
     try {
-        const findCityByCountryNameSchema = Joi.object({
-            country_name: Joi.string().required()
-        });
-
-        const { error, value } = findCityByCountryNameSchema.validate(req.body);
-        if (error) return joiErrorHandle(res, error);
-
-        const { country_name } = value;
-
         const cityRepository = getRepository(City);
 
-        const cityResult = await cityRepository.find({ where: { country_name: country_name, is_active: true } });
+        const cityResult = await cityRepository.find({ where: { is_deleted: false, is_active: true } });
 
-        if (!cityResult) return handleError(res, 404, 'Not cities found');
+        if (!cityResult) return handleError(res, 404, 'No bus stops found.');
 
-        return handleSuccess(res, 200, 'Cities found successfully', cityResult);
+        return handleSuccess(res, 200, 'Bus stops retrieved successfully.', cityResult);
     } catch (error: any) {
-        console.error("Error in getCityByCountryName:", error);
-        return handleError(res, 500, error.message);
-    }
-};
-
-export const createCityTerminal = async (req: Request, res: Response) => {
-    try {
-        const createCitySchema = Joi.object({
-            city_id: Joi.number().required(),
-            terminal_name: Joi.string().required(),
-            latitude: Joi.number().required(),
-            longitude: Joi.number().required()
-        });
-
-        const { error, value } = createCitySchema.validate(req.body);
-        if (error) return joiErrorHandle(res, error);
-
-        const { city_id, terminal_name, latitude, longitude } = value;
-
-        const cityRepository = getRepository(City);
-        const terminalRepository = getRepository(Terminal);
-
-
-        const cityResult = await cityRepository.findOne({ where: { city_id: city_id } });
-        if (!cityResult) return handleError(res, 404, 'City not found');
-
-        const findTerminal = await terminalRepository.findOne({ where: { terminal_name, city: city_id, is_deleted: false } });
-        if (findTerminal) return handleError(res, 400, "Terminal with this name already exists in the city.");
-
-        const newTerminal = terminalRepository.create({
-            city: cityResult,
-            terminal_name,
-            latitude,
-            longitude
-        });
-
-        await terminalRepository.save(newTerminal);
-
-        return handleSuccess(res, 200, "Terminal created successfully");
-    } catch (error: any) {
-        console.error("Error in getCityByCountryName:", error);
-        return handleError(res, 500, error.message);
-    }
-};
-
-export const getAllCityTerminal = async (req: Request, res: Response) => {
-    try {
-        const { page = 1, limit = 10, search = '' } = req.query;
-
-        const pageNumber = parseInt(page as string, 10);
-        const pageLimit = parseInt(limit as string, 10);
-
-        const offset = (pageNumber - 1) * pageLimit;
-
-        const terminalRepository = getRepository(Terminal);
-
-        const [terminals, total] = await terminalRepository.findAndCount({
-            relations: ['city'], order: { terminal_id: 'desc' },
-            where: search ? [
-                { terminal_name: Like(`%${search}%`), is_deleted: false },
-                { city: { city_name: Like(`%${search}%`) }, is_deleted: false },
-                { city: { country_name: Like(`%${search}%`) }, is_deleted: false },
-            ] : { is_deleted: false },
-            take: pageLimit,
-            skip: offset,
-        });
-
-        const totalPages = Math.ceil(total / pageLimit);
-
-        return handleSuccess(res, 200, "Terminals retrieved successfully", {
-            terminals, pagination: {
-                total,
-                totalPages,
-                currentPage: pageNumber,
-                pageSize: pageLimit,
-            },
-        });
-    } catch (error: any) {
-        console.error("Error in getCityByCountryName:", error);
-        return handleError(res, 500, error.message);
-    }
-};
-
-export const getCityTerminalById = async (req: Request, res: Response) => {
-    try {
-        const getCityTerminalSchema = Joi.object({
-            terminal_id: Joi.number().required()
-        });
-
-        const { error, value } = getCityTerminalSchema.validate(req.body);
-        if (error) return joiErrorHandle(res, error);
-
-        const { terminal_id } = value;
-
-        const terminalRepository = getRepository(Terminal);
-
-        const terminal = await terminalRepository.findOne({ where: { terminal_id }, relations: ['city'] });
-
-        if (!terminal) return handleError(res, 404, 'Terminal not found');
-
-        return handleSuccess(res, 200, "Terminal retrieved successfully", terminal);
-    } catch (error: any) {
-        console.error("Error in getCityByCountryName:", error);
-        return handleError(res, 500, error.message);
-    }
-};
-
-export const updateCityTerminalById = async (req: Request, res: Response) => {
-    try {
-        const updateCityTerminalSchema = Joi.object({
-            city_id: Joi.number().required(),
-            terminal_name: Joi.string().required(),
-            latitude: Joi.number().required(),
-            longitude: Joi.number().required(),
-            terminal_id: Joi.number().required()
-        });
-
-        const { error, value } = updateCityTerminalSchema.validate(req.body);
-        if (error) return joiErrorHandle(res, error);
-
-        const { terminal_id, city_id, terminal_name, latitude, longitude } = value;
-
-        const terminalRepository = getRepository(Terminal);
-        const cityRepository = getRepository(City);
-
-        const existingTerminal = await terminalRepository.findOne({ where: { terminal_id } });
-        if (!existingTerminal) return handleError(res, 404, 'Terminal not found');
-
-        const cityResult = await cityRepository.findOne({ where: { city_id } });
-        if (!cityResult) return handleError(res, 404, 'City not found');
-
-        const duplicateTerminal = await terminalRepository.findOne({
-            where: { terminal_name, city: city_id, is_deleted: false },
-        });
-
-        if (duplicateTerminal) return handleError(res, 400, 'Terminal name already exists in this city');
-
-        existingTerminal.city = city_id;
-        existingTerminal.terminal_name = terminal_name;
-        existingTerminal.latitude = latitude;
-        existingTerminal.longitude = longitude;
-
-        await terminalRepository.save(existingTerminal);
-
-        return handleSuccess(res, 200, 'Terminal updated successfully', existingTerminal);
-    } catch (error: any) {
-        console.error("Error in getCityByCountryName:", error);
-        return handleError(res, 500, error.message);
-    }
-};
-
-export const deleteCityTerminalById = async (req: Request, res: Response) => {
-    try {
-        const deleteCityTerminalSchema = Joi.object({
-            terminal_id: Joi.number().required()
-        });
-
-        const { error, value } = deleteCityTerminalSchema.validate(req.body);
-        if (error) return joiErrorHandle(res, error);
-
-        const { terminal_id } = value;
-
-        const terminalRepository = getRepository(Terminal);
-
-        const terminal = await terminalRepository.findOne({ where: { terminal_id } });
-
-        if (!terminal) return handleError(res, 404, 'Terminal not found or already deleted');
-
-        if (terminal) terminal.is_deleted = true
-
-        const deleteTerminal = await terminalRepository.save(terminal)
-
-        return handleSuccess(res, 200, "Terminal deleted successfully");
-    } catch (error: any) {
-        console.error("Error in getCityByCountryName:", error);
-        return handleError(res, 500, error.message);
-    }
-};
-
-export const getCityTerminalByCityId = async (req: Request, res: Response) => {
-    try {
-        const getCityTerminalSchema = Joi.object({
-            city_id: Joi.number().required()
-        });
-
-        const { error, value } = getCityTerminalSchema.validate(req.body);
-        if (error) return joiErrorHandle(res, error);
-
-        const { city_id } = value;
-
-        const terminalRepository = getRepository(Terminal);
-
-        const terminalsResult = await terminalRepository.find({ where: { city: { city_id: city_id }, is_deleted: false }, relations: ['city'] });
-
-        if (!terminalsResult) return handleError(res, 404, 'No terminals found for the provided city ID');
-
-        return handleSuccess(res, 200, "Successfully retrieved terminals", terminalsResult);
-    } catch (error: any) {
-        console.error("Error in getCityByCountryName:", error);
+        console.error("Error in getAllCity:", error);
         return handleError(res, 500, error.message);
     }
 };

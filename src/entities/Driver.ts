@@ -29,6 +29,9 @@ export class Driver {
     @Column({ type: 'date', nullable: true })
     license_expiry_date: Date;
 
+    @Column({ type: 'boolean', default: true })
+    is_active: boolean;
+
     @Column({ type: 'boolean', default: false })
     is_deleted: boolean;
 

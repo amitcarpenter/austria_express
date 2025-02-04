@@ -5,9 +5,6 @@ export class Route {
     @PrimaryGeneratedColumn()
     route_id: number;
 
-    @Column({ type: 'enum', enum: ['Austria to Ukraine', 'Ukraine to Austria'] })
-    route_direction: string;
-
     @Column({ nullable: false })
     title: string;
 

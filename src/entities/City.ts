@@ -5,11 +5,11 @@ export class City {
     @PrimaryGeneratedColumn()
     city_id: number;
 
-    @Column({ nullable: true })
-    country_name: string;
-
     @Column()
     city_name: string;
+
+    @Column({ nullable: true })
+    city_description: string;
 
     @Column()
     city_address: string;
@@ -20,8 +20,17 @@ export class City {
     @Column({ type: 'decimal', precision: 10, scale: 7 })
     longitude: number;
 
+    @Column({ type: 'boolean', default: false })
+    from_ukraine: boolean;
+
     @Column({ type: 'boolean', default: true })
     is_active: boolean;
+
+    @Column({ type: 'boolean', default: false })
+    is_deleted: boolean;
+
+    @Column({ nullable: true })
+    city_image: string;
 
     @CreateDateColumn()
     created_at: Date;
