@@ -7,17 +7,27 @@ import { City } from "../../entities/City";
 export const searchCities = async (req: Request, res: Response) => {
     try {
         const searchCitySchema = Joi.object({
-            city_name: Joi.string().required()
+            city_name: Joi.string().required(),
+            from_ukraine: Joi.boolean().optional().allow(true, false),
         });
 
         const { error, value } = searchCitySchema.validate(req.body);
         if (error) return joiErrorHandle(res, error);
 
-        const { city_name } = value;
-
+        const { city_name, from_ukraine } = value;
         const cityRepository = getRepository(City);
 
-        const cityResult = await cityRepository.find({ where: { city_name: ILike(`${city_name}%`) } });
+        const whereCondition: any = {
+            city_name: ILike(`${city_name}%`),
+            is_active: true,
+            is_deleted: false,
+        };
+
+        if (typeof from_ukraine === "boolean") {
+            whereCondition.from_ukraine = from_ukraine;
+        }
+
+        const cityResult = await cityRepository.find({ where: whereCondition });
 
         if (!cityResult) return handleError(res, 404, 'No cities found');
 

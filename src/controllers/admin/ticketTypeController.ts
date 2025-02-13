@@ -20,10 +20,10 @@ export const add_ticket_type = async (req: Request, res: Response) => {
         try {
             await queryRunner.connect();
             const result = await queryRunner.query(`SHOW COLUMNS FROM ticket_type LIKE '${value.ticket_type}'`);
-            if (result.length > 0) return handleError(res, 400, `Passenger type '${value.ticket_type}' already exists.`);
+            if (result.length > 0) return handleError(res, 400, `Ticket type '${value.ticket_type}' already exists.`);
 
-            await queryRunner.query(`ALTER TABLE ticket_type ADD COLUMN ${value.ticket_type} DECIMAL(10, 2) DEFAULT NULL`);
-            return handleSuccess(res, 200, `Passenger type '${value.ticket_type}' added successfully to 'ticket_type'.`);
+            await queryRunner.query(`ALTER TABLE ticket_type ADD COLUMN  \`${value.ticket_type}\` DECIMAL(10, 2) DEFAULT NULL`);
+            return handleSuccess(res, 200, `Ticket type '${value.ticket_type}' added successfully.`);
         } catch (error) {
             console.error('Error adding column:', error);
             return handleError(res, 500, 'An error occurred while adding the column.');
@@ -55,11 +55,11 @@ export const delete_ticket_type = async (req: Request, res: Response) => {
 
             const result = await queryRunner.query(`SHOW COLUMNS FROM ticket_type LIKE ?`, [ticket_type]);
 
-            if (result.length === 0) return handleError(res, 400, `Passenger type '${ticket_type}' does not exist.`);
+            if (result.length === 0) return handleError(res, 400, `Ticket type '${ticket_type}' does not exist.`);
 
             await queryRunner.query(`ALTER TABLE ticket_type DROP COLUMN ??`, [ticket_type]);
 
-            return handleSuccess(res, 200, `Passenger type '${ticket_type}' deleted successfully.`);
+            return handleSuccess(res, 200, `Ticket type '${ticket_type}' deleted successfully.`);
         } catch (error) {
             console.error('Error deleting column:', error);
             return handleError(res, 500, 'An error occurred while deleting the column.');

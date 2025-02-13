@@ -40,7 +40,7 @@ export const bus_search = async (req: Request, res: Response) => {
 
         const allBusesForRoutes: BusSchedule[] = await busScheduleRepository.find({
             where: {
-                route: In(matchingCityPickupDropPoint.map((route: any) => route.routeRouteId))
+                route: In(matchingCityPickupDropPoint.filter((route: any) => route.Baseprice != null).map((route: any) => route.routeRouteId))
             },
             relations: ['bus', 'route'],
         });
@@ -74,6 +74,13 @@ export const bus_search = async (req: Request, res: Response) => {
             if (isBusAvailable) {
                 if (bus.recurrence_pattern === 'Daily' ||
                     (['Weekly', 'Custom'].includes(bus.recurrence_pattern) && bus.days_of_week?.includes(weekday))) {
+
+                    const routeStopsData = await routeStopsRepository.find({
+                        where: { route: { route_id: bus.route.route_id } },
+                        relations: ["stop_city"],
+                        order: { stop_order: "ASC" },
+                    });
+
                     const pickupStop = await routeStopsRepository.findOne({
                         where: {
                             route: { route_id: bus.route.route_id },
@@ -101,11 +108,15 @@ export const bus_search = async (req: Request, res: Response) => {
 
                         const duration = moment.duration(arrivalTime.diff(departureTime));
 
+                        const matchingRoute = matchingCityPickupDropPoint.find((route: any) => route.routeRouteId === bus.route.route_id);
+
                         busesForSelectedDate.push({
                             ...(bus as any),
                             departure_time: departureTime.format('YYYY-MM-DD HH:mm'),
                             arrival_time: arrivalTime.format('YYYY-MM-DD HH:mm'),
                             duration: `${duration.hours()} hours ${duration.minutes()} minutes`,
+                            base_price: matchingRoute || null,
+                            route_stops: routeStopsData,
                         });
                     } else {
                         console.error('One of the stops is missing: pickupStop or dropoffStop is null');

@@ -8,10 +8,10 @@ export class City {
     @Column()
     city_name: string;
 
-    @Column({ nullable: true })
+    @Column({ type: 'text', nullable: true })
     city_description: string;
 
-    @Column()
+    @Column({ type: 'text' })
     city_address: string;
 
     @Column({ type: 'decimal', precision: 10, scale: 7 })

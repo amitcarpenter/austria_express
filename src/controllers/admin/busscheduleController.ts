@@ -44,7 +44,7 @@ export const create_busschedule = async (req: Request, res: Response) => {
         });
 
         await busscheduleRepository.save(newBusschedule);
-        return handleSuccess(res, 200, "Bus Schedule Created Successfully.");
+        return handleSuccess(res, 200, "Bus Schedule Successfully.");
     } catch (error: any) {
         console.error("Error in create_bus:", error);
         return handleError(res, 500, error.message);
@@ -176,7 +176,7 @@ export const update_busschedule = async (req: Request, res: Response) => {
 
         await busscheduleRepository.save(busscheduleResult);
 
-        return handleSuccess(res, 200, 'Bus schedule updated successfully');
+        return handleSuccess(res, 200, 'Bus schedule successfully');
     } catch (error: any) {
         console.error("Error in update_busschedule:", error);
         return handleError(res, 500, error.message);
