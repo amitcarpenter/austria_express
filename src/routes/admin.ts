@@ -9,9 +9,9 @@ import * as roleControllers from "../controllers/role/roleController";
 import * as routeControllers from "../controllers/admin/routeController";
 import * as routeClosureControllers from "../controllers/admin/routeClosureController";
 import * as ticketTypeControllers from "../controllers/admin/ticketTypeController";
-import * as driverControllers from "../controllers/admin/driverController";
 import * as busControllers from "../controllers/admin/busController";
 import * as busscheduleControllers from "../controllers/admin/busscheduleController";
+import * as bookingControllers from "../controllers/admin/bookingControllers";
 import * as cityControllers from "../controllers/admin/cityController";
 import * as contactUsControllers from "../controllers/admin/contactUsController";
 import { get_lat_long } from "../utils/latlong";
@@ -65,6 +65,8 @@ router.post("/update-route-status", authenticateAdmin, routeControllers.update_r
 router.post("/delete-route", authenticateAdmin, routeControllers.delete_route);
 router.post("/update-departuretime", authenticateAdmin, routeControllers.update_departuretime);
 router.post("/create-copy-route", authenticateAdmin, routeControllers.create_copy_route);
+router.post("/update-delete-route-status-by-id", authenticateAdmin, routeControllers.updateDeleteRouteStatusById);
+router.get("/get-all-deleted-routes", authenticateAdmin, routeControllers.get_all_deleted_routes);
 
 //==================================== Route Closure ==============================
 router.post("/create-closure", authenticateAdmin, routeClosureControllers.createRouteClosure);
@@ -78,15 +80,6 @@ router.post("/delete-ticket-type", authenticateAdmin, ticketTypeControllers.dele
 router.get("/get-all-ticket-type", authenticateAdmin, ticketTypeControllers.get_all_ticket_type);
 router.post("/get-ticket-type-by-routeid", authenticateAdmin, ticketTypeControllers.get_ticket_type_by_routeid);
 router.post("/update-ticket-price", authenticateAdmin, ticketTypeControllers.update_ticket_price);
-
-//==================================== Driver ==============================
-router.post("/create-driver", authenticateAdmin, uploadFile, driverControllers.create_driver);
-router.get("/get-all-drivers", authenticateAdmin, driverControllers.get_all_drivers);
-router.get("/get-all-drivers-by-limit-search", authenticateAdmin, driverControllers.get_all_drivers_by_search_limit);
-router.post("/get-driver-by-id", authenticateAdmin, driverControllers.get_driver_by_id);
-router.post("/update-driver", authenticateAdmin, uploadFile, driverControllers.update_driver);
-router.post("/update-driver-status", authenticateAdmin, driverControllers.update_driver_status);
-router.post("/delete-driver", authenticateAdmin, driverControllers.delete_driver);
 
 //==================================== Bus ==============================
 router.post("/create-bus", authenticateAdmin, busControllers.create_bus);
@@ -103,6 +96,13 @@ router.post("/get-busschedule-byid", authenticateAdmin, busscheduleControllers.g
 router.post("/update-busschedule", authenticateAdmin, busscheduleControllers.update_busschedule);
 router.post("/delete-busschedule", authenticateAdmin, busscheduleControllers.delete_busschedule);
 router.post("/get-all-busschedule-by-routeid", authenticateAdmin, busscheduleControllers.get_all_busschedule_by_route_id);
+
+//==================================== Booking ==============================
+router.post("/create-booking", authenticateAdmin, bookingControllers.create_booking);
+router.post("/get-all-booking", authenticateAdmin, bookingControllers.get_all_booking);
+router.get("/get-booking-byid", authenticateAdmin, bookingControllers.get_booking_by_id);
+router.post("/update-booking-byid", authenticateAdmin, bookingControllers.update_booking_by_id);
+router.get("/delete-booking-byid", authenticateAdmin, bookingControllers.delete_booking_by_id);
 
 //=================================== Lat Long ==========================
 router.post("/get-lat-long", get_lat_long);

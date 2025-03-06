@@ -43,9 +43,6 @@ app.get("/", (req: Request, res: Response) => {
   return res.send("Initial project setup done")
 });
 
-
-
-
 // const sslOptions = {
 //   ca: fs.readFileSync("/var/www/html/ssl/ca_bundle.crt"),
 //   key: fs.readFileSync("/var/www/html/ssl/private.key"),
@@ -57,9 +54,6 @@ app.get("/", (req: Request, res: Response) => {
 // httpsServer.listen(PORT, () => {
 //   console.log(`Server is working on ${APP_URL}`);
 // })
-
-
-
 
 app.listen(PORT, (): void => {
   console.log(`Server is working on ${APP_URL}`);

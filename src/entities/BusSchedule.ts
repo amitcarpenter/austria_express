@@ -1,7 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Bus } from './Bus';
 import { Route } from './Route';
-import { Driver } from './Driver';
 
 @Entity()
 export class BusSchedule {
@@ -13,9 +12,6 @@ export class BusSchedule {
 
     @ManyToOne(() => Route, { nullable: false, onDelete: 'CASCADE' })
     route: Route;
-
-    @ManyToOne(() => Driver, { nullable: true, onDelete: 'CASCADE' })
-    driver: Driver;
 
     @Column({ type: 'boolean', default: true })
     available: boolean;

@@ -39,7 +39,6 @@ router.post("/bus-search", busControllers.bus_search);
 router.post("/search-by-city", cityControllers.searchCities);
 router.post("/cities-countries-search", cityControllers.searchCitiesByCountry);
 
-
 //======================== Cities ======================================
 router.get("/get-all-city", cityControllersAdmin.getAllActiveCity);
 

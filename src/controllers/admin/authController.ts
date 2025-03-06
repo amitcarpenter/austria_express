@@ -14,7 +14,6 @@ import { sendEmail } from "../../services/otpService";
 import { handleError, handleSuccess } from "../../utils/responseHandler";
 import { Bus } from "../../entities/Bus";
 import { Route } from "../../entities/Route";
-import { Driver } from "../../entities/Driver";
 import { BusSchedule } from "../../entities/BusSchedule";
 
 dotenv.config();
@@ -364,13 +363,11 @@ export const dashboard_details = async (req: Request, res: Response) => {
   try {
     const userRepository = getRepository(User);
     const busRepository = getRepository(Bus);
-    const driverRepository = getRepository(Driver);
     const routeRepository = getRepository(Route);
     const busscheduleRepository = getRepository(BusSchedule);
 
     const userCount = (await userRepository.count({ where: { is_verified: true } }));
     const busCount = await busRepository.count({ where: { is_deleted: false } });
-    const driverCount = await driverRepository.count({ where: { is_deleted: false } });
     const routeCount = await routeRepository.count({ where: { is_deleted: false } });
     const busScheduleCount = await busscheduleRepository.count();
     const userList = await userRepository.find({ where: { is_verified: true }, take: 5, order: { id: 'DESC' } });
@@ -378,7 +375,6 @@ export const dashboard_details = async (req: Request, res: Response) => {
     let data = {
       userCount: userCount || 0,
       busCount: busCount || 0,
-      driverCount: driverCount || 0,
       routeCount: routeCount || 0,
       busScheduleCount: !busScheduleCount ? 0 : busScheduleCount,
       userList: !userList ? [] : userList

@@ -10,7 +10,6 @@ export const create_busschedule = async (req: Request, res: Response) => {
         const createBusscheduleSchema = Joi.object({
             bus_id: Joi.number().required(),
             route_id: Joi.number().required(),
-            driver_id: Joi.number().required().allow('', null),
             available: Joi.boolean().required().allow(true, false),
             from: Joi.date().optional().allow(null, ''),
             to: Joi.date().optional().allow(null, '').greater(Joi.ref('from')).messages({
@@ -25,7 +24,7 @@ export const create_busschedule = async (req: Request, res: Response) => {
         const { error, value } = createBusscheduleSchema.validate(req.body);
         if (error) return joiErrorHandle(res, error);
 
-        const { bus_id, route_id, driver_id, available, from, to, recurrence_pattern, days_of_week } = value;
+        const { bus_id, route_id, available, from, to, recurrence_pattern, days_of_week } = value;
 
         const busscheduleRepository = getRepository(BusSchedule);
 
@@ -35,7 +34,6 @@ export const create_busschedule = async (req: Request, res: Response) => {
         const newBusschedule = busscheduleRepository.create({
             bus: bus_id,
             route: route_id,
-            driver: driver_id,
             available: available,
             from: available == false ? from : null,
             to: available == false ? to : null,
@@ -74,7 +72,7 @@ export const get_all_busschedule = async (req: Request, res: Response) => {
 
         const [busSchedules, totalSchedules] = await busscheduleRepository.findAndCount({
             where: whereConditions.length > 0 ? whereConditions : [],
-            relations: ['bus', 'driver', 'route'],
+            relations: ['bus', 'route'],
             order: { schedule_id: 'DESC' },
             take: pageLimit,
             skip: offset,
@@ -122,7 +120,7 @@ export const get_all_busschedule_byid = async (req: Request, res: Response) => {
 
         const busscheduleResult = await busscheduleRepository.findOne({
             where: { schedule_id },
-            relations: ['bus', 'route', 'driver']
+            relations: ['bus', 'route']
         });
 
         if (!busscheduleResult) return handleError(res, 404, 'Bus schedule not found');
@@ -140,7 +138,6 @@ export const update_busschedule = async (req: Request, res: Response) => {
             schedule_id: Joi.number().required(),
             bus_id: Joi.number().required(),
             route_id: Joi.number().required(),
-            driver_id: Joi.number().required(),
             available: Joi.boolean().required().allow(true, false),
             from: Joi.date().optional().allow(null, ''),
             to: Joi.date().optional().allow(null, '').greater(Joi.ref('from')).messages({
@@ -155,7 +152,7 @@ export const update_busschedule = async (req: Request, res: Response) => {
         const { error, value } = updateBusscheduleSchema.validate(req.body);
         if (error) return joiErrorHandle(res, error);
 
-        const { schedule_id, bus_id, route_id, driver_id, available, from, to, recurrence_pattern, days_of_week } = value;
+        const { schedule_id, bus_id, route_id, available, from, to, recurrence_pattern, days_of_week } = value;
 
         const busscheduleRepository = getRepository(BusSchedule);
 
@@ -167,7 +164,6 @@ export const update_busschedule = async (req: Request, res: Response) => {
 
         if (bus_id) busscheduleResult.bus = bus_id;
         if (route_id) busscheduleResult.route = route_id;
-        if (driver_id) busscheduleResult.driver = driver_id;
         busscheduleResult.available = available;
         busscheduleResult.from = available == false ? from : null;
         busscheduleResult.to = available == false ? to : null;
@@ -223,7 +219,7 @@ export const get_all_busschedule_by_route_id = async (req: Request, res: Respons
         const busscheduleResult = await busscheduleRepository.find({
             where: { route: { route_id } },
             order: { schedule_id: 'DESC' },
-            relations: ['bus', 'driver', 'route']
+            relations: ['bus', 'route']
         });
         if (!busscheduleResult) return handleError(res, 404, 'Bus schedule not found');
 

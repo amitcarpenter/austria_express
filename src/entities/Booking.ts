@@ -1,51 +1,71 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { SeatManagement } from './SeatManagement';
 import { Route } from './Route';
-import { Bus } from './Bus';
+import { City } from './City';
 
 @Entity()
 export class Booking {
-    @PrimaryGeneratedColumn()
-    booking_id: number;
+    @PrimaryGeneratedColumn('uuid')
+    booking_id: string;
 
-    @ManyToOne(() => SeatManagement, { nullable: false })
-    seat: SeatManagement;
-
-    @ManyToOne(() => Bus, { nullable: false, onDelete: 'CASCADE' })
-    bus: Bus;
-
-    @ManyToOne(() => Route, { nullable: false, onDelete: 'CASCADE' })
+    @ManyToOne(() => Route, { nullable: false, onDelete: "CASCADE" })
     route: Route;
 
-    @Column()
-    passenger_first_name: string;
+    @ManyToOne(() => City, { nullable: false })
+    from: City;
 
-    @Column()
-    passenger_last_name: string;
+    @ManyToOne(() => City, { nullable: false })
+    to: City;
 
-    @Column()
-    passenger_contact: string;
-
-    @Column()
-    passenger_viber_number: string;
-
-    @Column({ type: 'decimal', precision: 10, scale: 2 })
-    fare: number;
-
-    @Column({ nullable: true })
-    payment_reference: string;
-
-    @Column({ type: 'timestamp', nullable: false })
+    @Column({ type: 'date', nullable: false })
     travel_date: Date;
 
-    @Column({ type: 'time', nullable: true })
+    @Column()
     departure_time: string;
 
-    @Column({ type: 'time', nullable: true })
-    arrival_time: string;
+    @Column()
+    arrival_time: String;
+
+    @Column({ type: 'enum', enum: ['Pending', 'Confirmed', 'Cancelled'], default: 'Pending' })
+    booking_status: string;
+
+    @Column()
+    payment_method: string;
+
+    @Column({ type: 'decimal', precision: 10, scale: 2 })
+    subtotal: number;
+
+    @Column({ type: 'decimal', precision: 10, scale: 2 })
+    tax: number;
+
+    @Column({ type: 'decimal', precision: 10, scale: 2 })
+    total: number;
+
+    @Column({ type: 'decimal', precision: 10, scale: 2 })
+    deposit: number;
 
     @Column({ type: 'boolean', default: false })
     is_refundable: boolean;
+
+    @Column({ nullable: false })
+    first_name: string;
+
+    @Column({ nullable: false })
+    last_name: string;
+
+    @Column({ nullable: false })
+    phone: string;
+
+    @Column({ nullable: false })
+    email: string;
+
+    @Column({ type: 'text', nullable: true })
+    notes: string;
+
+    @Column({ type: 'boolean', default: true })
+    is_active: boolean;
+
+    @Column({ type: 'boolean', default: false })
+    is_deleted: boolean;
 
     @CreateDateColumn()
     created_at: Date;

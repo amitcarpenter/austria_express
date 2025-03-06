@@ -76,21 +76,21 @@ export const bus_search = async (req: Request, res: Response) => {
                     (['Weekly', 'Custom'].includes(bus.recurrence_pattern) && bus.days_of_week?.includes(weekday))) {
 
                     const routeStopsData = await routeStopsRepository.find({
-                        where: { route: { route_id: bus.route.route_id } },
+                        where: { route: { route_id: bus.route.route_id, is_deleted: false } },
                         relations: ["stop_city"],
                         order: { stop_order: "ASC" },
                     });
 
                     const pickupStop = await routeStopsRepository.findOne({
                         where: {
-                            route: { route_id: bus.route.route_id },
+                            route: { route_id: bus.route.route_id, is_deleted: false },
                             stop_city: { city_id: pickup_point }
                         },
                     });
 
                     const dropoffStop = await routeStopsRepository.findOne({
                         where: {
-                            route: { route_id: bus.route.route_id },
+                            route: { route_id: bus.route.route_id, is_deleted: false },
                             stop_city: { city_id: dropoff_point }
                         },
                     });

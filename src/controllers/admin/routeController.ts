@@ -424,7 +424,7 @@ export const create_copy_route = async (req: Request, res: Response) => {
             await connection.query(`INSERT INTO ticket_type SET ?`, [ticketType]);
         }
 
-        const busSchedule = await busScheduleRepository.findOne({ where: { route: { route_id: existingRoute.route_id } }, relations: ['bus', 'driver'] });
+        const busSchedule = await busScheduleRepository.findOne({ where: { route: { route_id: existingRoute.route_id } }, relations: ['bus'] });
         if (busSchedule) {
             const { schedule_id, created_at, updated_at, ...busScheduleData } = busSchedule;
             const newBusSchedule = busScheduleRepository.create({
@@ -436,6 +436,62 @@ export const create_copy_route = async (req: Request, res: Response) => {
         return handleSuccess(res, 200, "Route/Line copied successfully.");
     } catch (error: any) {
         console.error("Error in create_copy_route:", error);
+        return handleError(res, 500, error.message);
+    }
+};
+
+export const updateDeleteRouteStatusById = async (req: Request, res: Response) => {
+    try {
+        const updateDeleteRouteSchema = Joi.object({
+            route_id: Joi.number().required(),
+            is_delete: Joi.boolean().valid(true, false).required()
+        });
+
+        const { error, value } = updateDeleteRouteSchema.validate(req.body);
+        if (error) return joiErrorHandle(res, error);
+
+        const routeRepository = getRepository(Route);
+
+        const route = await routeRepository.findOne({ where: { route_id: value.route_id } });
+        if (!route) return res.status(404).json({ message: "Route not found" });
+
+        route.is_deleted = value.is_delete;
+        await routeRepository.save(route);
+
+        return handleSuccess(res, 200, `Route ${value.is_delete ? "archived" : "restored"} successfully.`);
+    } catch (error: any) {
+        console.error("Error in updateDeleteRouteStatusById:", error);
+        return handleError(res, 500, error.message);
+    }
+};
+
+export const get_all_deleted_routes = async (req: Request, res: Response) => {
+    try {
+        const routeRepository = getRepository(Route);
+        const routeStopsRepository = getRepository(Route_Stops);
+
+        const [routes, total] = await routeRepository.findAndCount({
+            where: {
+                is_deleted: true
+            },
+            order: { updated_at: 'DESC' },
+        });
+
+        const routesWithStops = await Promise.all(
+            routes.map(async (route) => {
+                const stops = await routeStopsRepository.find({
+                    where: { route: { route_id: route.route_id } },
+                    relations: ["stop_city"],
+                    order: { stop_order: 'ASC' },
+                });
+                return { ...route, route_stops: stops };
+            })
+        );
+
+
+        return handleSuccess(res, 200, "Deleted routes fetched successfully.", routesWithStops);
+    } catch (error: any) {
+        console.error("Error in get_all_routes_by_search_limit:", error);
         return handleError(res, 500, error.message);
     }
 };
