@@ -1,6 +1,6 @@
 import Joi from "joi";
 import { Request, Response } from "express";
-import { getRepository, In, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
+import { getRepository, In, IsNull, LessThanOrEqual, MoreThanOrEqual, Not } from 'typeorm';
 import moment from 'moment';
 import { BusSchedule } from "../../entities/BusSchedule";
 import { handleSuccess, handleError, joiErrorHandle } from "../../utils/responseHandler";
@@ -8,6 +8,8 @@ import { getConnection } from 'typeorm';
 import { TicketType } from "../../entities/TicketType";
 import { RouteClosure } from "../../entities/RouteClosure";
 import { Route_Stops } from "../../entities/RouteStop";
+import { Booking } from "../../entities/Booking";
+import { BookingPassenger } from "../../entities/BookingPassenger";
 
 export interface BusScheduleWithTicketType extends BusSchedule {
     ticket_type: TicketType[];
@@ -30,6 +32,8 @@ export const bus_search = async (req: Request, res: Response) => {
         const busScheduleRepository = getRepository(BusSchedule);
         const routeClosureRepository = getRepository(RouteClosure);
         const routeStopsRepository = getRepository(Route_Stops);
+        const bookingRepository = getRepository(Booking);
+        const bookingPassengerRepository = getRepository(BookingPassenger);
 
         const matchingCityPickupDropPoint = await connection.query('SELECT * FROM ticket_type WHERE startPointCityId = ? AND endPointCityId = ? AND is_active = 1', [pickup_point, dropoff_point]);
 
@@ -57,6 +61,7 @@ export const bus_search = async (req: Request, res: Response) => {
         const busesForSelectedDate: BusScheduleWithTicketType[] = [];
 
         for (const bus of allBusesForRoutes) {
+
             if (closedRouteIds.includes(bus.route)) {
                 continue;
             }
@@ -75,6 +80,19 @@ export const bus_search = async (req: Request, res: Response) => {
                 if (bus.recurrence_pattern === 'Daily' ||
                     (['Weekly', 'Custom'].includes(bus.recurrence_pattern) && bus.days_of_week?.includes(weekday))) {
 
+                    const getAllBooking = await bookingRepository.find({ where: { from: { city_id: pickup_point }, to: { city_id: dropoff_point }, route: { route_id: bus.route.route_id }, travel_date: travel_date, is_deleted: false } });
+
+                    const bookingPassengers = await Promise.all(
+                        getAllBooking.map(async (booking) => {
+                            const passengers = await bookingPassengerRepository.find({
+                                where: { booking: { id: booking.id }, selected_seat: Not(IsNull()) }
+                            });
+                            return { ...booking, passengers };
+                        })
+                    );
+
+                    const totalPassengers = bookingPassengers.reduce((sum, booking) => sum + booking.passengers.length, 0);
+
                     const routeStopsData = await routeStopsRepository.find({
                         where: { route: { route_id: bus.route.route_id, is_deleted: false } },
                         relations: ["stop_city"],
@@ -86,6 +104,7 @@ export const bus_search = async (req: Request, res: Response) => {
                             route: { route_id: bus.route.route_id, is_deleted: false },
                             stop_city: { city_id: pickup_point }
                         },
+                        relations: ["stop_city"]
                     });
 
                     const dropoffStop = await routeStopsRepository.findOne({
@@ -93,6 +112,7 @@ export const bus_search = async (req: Request, res: Response) => {
                             route: { route_id: bus.route.route_id, is_deleted: false },
                             stop_city: { city_id: dropoff_point }
                         },
+                        relations: ["stop_city"]
                     });
 
                     if (pickupStop && dropoffStop) {
@@ -117,6 +137,9 @@ export const bus_search = async (req: Request, res: Response) => {
                             duration: `${duration.hours()} hours ${duration.minutes()} minutes`,
                             base_price: matchingRoute || null,
                             route_stops: routeStopsData,
+                            pickupStop: pickupStop,
+                            dropoffStop: dropoffStop,
+                            total_booked_seats: totalPassengers
                         });
                     } else {
                         console.error('One of the stops is missing: pickupStop or dropoffStop is null');

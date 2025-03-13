@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bus Ticket - Austria Express</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            text-align: center;
+            padding: 10px;
+            background: #004225;
+            color: #fff;
+            font-size: 22px;
+            font-weight: bold;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .ticket-details {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .ticket-details td {
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+
+        .ticket-details strong {
+            color: #333;
+        }
+
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            padding: 10px;
+            margin-top: 15px;
+            border-top: 1px solid #ddd;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">Bus Booking - Austria Express</div>
+        <p>Dear <strong>
+                <%= first_name %>
+                    <%= last_name %>
+            </strong>,</p>
+        <p>Thank you for choosing Austria Express! Your booking details are as follows:</p>
+        <table class="ticket-details">
+            <tr>
+                <td colspan="2"><strong>Passenger:</strong></td>
+                <td colspan="2"><strong>Booking Details:</strong></td>
+            </tr>
+            <tr>
+                <td><strong>First Name:</strong></td>
+                <td>
+                    <%= first_name %>
+                </td>
+                <td><strong>Departure:</strong></td>
+                <td><%= travel_date %> <%= departure_time %> - <%= arrival_time %></td>
+            </tr>
+            <tr>
+                <td><strong>Last Name:</strong></td>
+                <td>
+                    <%= last_name %>
+                </td>
+                <td><strong>Bus:</strong></td>
+                <td><%= route_name %></td>
+            </tr>
+            <tr>
+                <td><strong>Email:</strong></td>
+                <td>
+                    <%= email %>
+                </td>
+                <td><strong>Line:</strong></td>
+                <td>from <%= from_city %> to <%= to_city %></td>
+            </tr>
+            <tr>
+                <td><strong>Phone:</strong></td>
+                <td>
+                    <%= phone %>
+                </td>
+                <td><strong>Total Amount:</strong></td>
+                <td><%= total %>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="2"></td>
+                <td><strong>Payment:</strong></td>
+                <td>
+                    <%= payment_method %>
+                </td>
+            </tr>
+        </table>
+        <div><strong>Note:</strong> You will receive a confirmation email soon regarding your seat allotment and final
+            confirmation.</div>
+        <div class="footer">&copy; Austria Express. All rights reserved.</div>
+    </div>
+</body>
+
+</html>

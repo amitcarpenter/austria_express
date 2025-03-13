@@ -1,8 +1,15 @@
 import Joi from "joi";
 import { Request, Response } from "express";
-import { getRepository, Like, Not, Or } from "typeorm";
+import { getConnection, getRepository, In, IsNull, LessThanOrEqual, Like, MoreThanOrEqual, Not, Or } from "typeorm";
 import { Bus } from "../../entities/Bus";
 import { handleSuccess, handleError, joiErrorHandle } from "../../utils/responseHandler";
+import { TicketType } from "../../entities/TicketType";
+import { BusSchedule } from "../../entities/BusSchedule";
+import { RouteClosure } from "../../entities/RouteClosure";
+import { Route_Stops } from "../../entities/RouteStop";
+import moment from "moment";
+import { Booking } from "../../entities/Booking";
+import { BookingPassenger } from "../../entities/BookingPassenger";
 
 export const create_bus = async (req: Request, res: Response) => {
     try {
@@ -51,7 +58,7 @@ export const create_bus = async (req: Request, res: Response) => {
 export const get_all_buses = async (req: Request, res: Response) => {
     try {
         const busRepository = getRepository(Bus);
-        const buses = await busRepository.find({ where: { is_deleted: false, is_active: true } });
+        const buses = await busRepository.find({ where: { is_deleted: false, is_active: true }, order: { bus_id: 'DESC' } });
         return handleSuccess(res, 200, "Buses fetched successfully.", buses);
     } catch (error: any) {
         console.error("Error in get_all_buses:", error);
@@ -194,6 +201,151 @@ export const delete_bus = async (req: Request, res: Response) => {
         return handleSuccess(res, 200, "Bus Deleted Successfully.");
     } catch (error: any) {
         console.error("Error in delete_bus:", error);
+        return handleError(res, 500, error.message);
+    }
+};
+
+export interface BusScheduleWithTicketType extends BusSchedule {
+    ticket_type: TicketType[];
+}
+
+export const bus_search = async (req: Request, res: Response) => {
+    try {
+        const createBusSchema = Joi.object({
+            pickup_point: Joi.string().required(),
+            dropoff_point: Joi.string().required(),
+            travel_date: Joi.string().required(),
+        });
+
+        const { error, value } = createBusSchema.validate(req.body);
+        if (error) return joiErrorHandle(res, error);
+
+        const { pickup_point, dropoff_point, travel_date } = value;
+
+        const connection = await getConnection();
+        const busScheduleRepository = getRepository(BusSchedule);
+        const routeClosureRepository = getRepository(RouteClosure);
+        const routeStopsRepository = getRepository(Route_Stops);
+        const bookingRepository = getRepository(Booking);
+        const bookingPassengerRepository = getRepository(BookingPassenger);
+
+        const matchingCityPickupDropPoint = await connection.query('SELECT * FROM ticket_type WHERE startPointCityId = ? AND endPointCityId = ? AND is_active = 1', [pickup_point, dropoff_point]);
+
+        if (!matchingCityPickupDropPoint || matchingCityPickupDropPoint.length === 0) return handleError(res, 200, 'No routes/lines available.');
+
+        const travelDate = moment(travel_date);
+        const weekday = travelDate.format('dddd');
+
+        const allBusesForRoutes: BusSchedule[] = await busScheduleRepository.find({
+            where: {
+                route: In(matchingCityPickupDropPoint.filter((route: any) => route.Baseprice != null).map((route: any) => route.routeRouteId))
+            },
+            relations: ['bus', 'route'],
+        });
+
+        const closedRoutes = await routeClosureRepository.find({
+            where: {
+                route: In(matchingCityPickupDropPoint.map((route: any) => route.routeRouteId)),
+                from_date: LessThanOrEqual(travelDate.toDate()),
+                to_date: MoreThanOrEqual(travelDate.toDate())
+            }
+        });
+        const closedRouteIds = closedRoutes.map(route => route.route);
+
+        const busesForSelectedDate: BusScheduleWithTicketType[] = [];
+
+        for (const bus of allBusesForRoutes) {
+            if (closedRouteIds.includes(bus.route)) {
+                continue;
+            }
+
+            let isBusAvailable = false;
+
+            if (!bus.available) {
+                if (bus.from && bus.to) {
+                    isBusAvailable = moment(travelDate).isBetween(moment(bus.from), moment(bus.to), 'day', '[]');
+                }
+            } else {
+                isBusAvailable = true;
+            }
+
+            if (isBusAvailable) {
+                if (bus.recurrence_pattern === 'Daily' ||
+                    (['Weekly', 'Custom'].includes(bus.recurrence_pattern) && bus.days_of_week?.includes(weekday))) {
+
+                    const getAllBooking = await bookingRepository.find({ where: { from: { city_id: pickup_point }, to: { city_id: dropoff_point }, route: { route_id: bus.route.route_id }, travel_date: travel_date, is_deleted: false } });
+
+                    const bookingPassengers = await Promise.all(
+                        getAllBooking.map(async (booking) => {
+                            const passengers = await bookingPassengerRepository.find({
+                                where: { booking: { id: booking.id }, selected_seat: Not(IsNull()) }
+                            });
+                            return { ...booking, passengers };
+                        })
+                    );
+
+                    const totalPassengers = bookingPassengers.reduce((sum, booking) => sum + booking.passengers.length, 0);
+
+                    const routeStopsData = await routeStopsRepository.find({
+                        where: { route: { route_id: bus.route.route_id, is_deleted: false } },
+                        relations: ["stop_city"],
+                        order: { stop_order: "ASC" },
+                    });
+
+                    const pickupStop = await routeStopsRepository.findOne({
+                        where: {
+                            route: { route_id: bus.route.route_id, is_deleted: false },
+                            stop_city: { city_id: pickup_point }
+                        },
+                    });
+
+                    const dropoffStop = await routeStopsRepository.findOne({
+                        where: {
+                            route: { route_id: bus.route.route_id, is_deleted: false },
+                            stop_city: { city_id: dropoff_point }
+                        },
+                    });
+
+                    if (pickupStop && dropoffStop) {
+                        const departureTimeStr = `${travel_date} ${pickupStop?.departure_time || ''}`;
+                        const arrivalTimeStr = `${travel_date} ${dropoffStop?.arrival_time || ''}`;
+
+                        const departureTime = moment(departureTimeStr, 'YYYY-MM-DD HH:mm');
+                        const arrivalTime = moment(arrivalTimeStr, 'YYYY-MM-DD HH:mm');
+
+                        if (arrivalTime.isBefore(departureTime)) {
+                            arrivalTime.add(1, 'days');
+                        }
+
+                        const duration = moment.duration(arrivalTime.diff(departureTime));
+
+                        const matchingRoute = matchingCityPickupDropPoint.find((route: any) => route.routeRouteId === bus.route.route_id);
+
+                        busesForSelectedDate.push({
+                            ...(bus as any),
+                            departure_time: departureTime.format('YYYY-MM-DD HH:mm'),
+                            arrival_time: arrivalTime.format('YYYY-MM-DD HH:mm'),
+                            duration: `${duration.hours()} hours ${duration.minutes()} minutes`,
+                            base_price: matchingRoute || null,
+                            route_stops: routeStopsData,
+                            pickupStop: pickupStop,
+                            dropoffStop: dropoffStop,
+                            total_booked_seats: totalPassengers
+                        });
+                    } else {
+                        console.error('One of the stops is missing: pickupStop or dropoffStop is null');
+                    }
+                }
+            }
+        }
+
+        if (!busesForSelectedDate.length) {
+            return handleError(res, 200, 'No buses available for the selected date.');
+        }
+
+        return handleSuccess(res, 200, 'Buses found successfully for the selected date.', busesForSelectedDate);
+    } catch (error: any) {
+        console.error('Error in bus_search:', error);
         return handleError(res, 500, error.message);
     }
 };

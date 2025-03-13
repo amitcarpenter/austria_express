@@ -12,7 +12,7 @@ export class BookingPassenger {
     @Column()
     ticket_type: string;
 
-    @Column()
+    @Column({ nullable: true })
     selected_seat: number;
 
     @Column()

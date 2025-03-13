@@ -1,5 +1,8 @@
 import axios from "axios"
 import { translate } from "free-translate"
+import { Booking } from "../entities/Booking";
+import { Between, getRepository, Like, Not, Or } from "typeorm";
+import moment from "moment";
 
 let googledistance_key = process.env.GOOGLE_API_KEY || "AIzaSyB0V1g5YyGB_NE1Lw1QitZZGECA5-1Xnng"
 
@@ -202,4 +205,21 @@ export const generateGuestUserUniqueId = async () => {
     } while (existingGuestIDs.has(uniqueID));
     existingGuestIDs.add(uniqueID);
     return uniqueID;
+};
+
+export const generateBookingNumber = async () => {
+    const now = moment();
+    const yy = now.format("YY");
+    const mm = now.format("MM");
+    const ww = String(Math.ceil(now.date() / 7)).padStart(2, "0");
+
+    const bookingRepo = getRepository(Booking);
+    const count = await bookingRepo.count({
+        where: {
+            created_at: Between(now.startOf("month").toDate(), now.endOf("month").toDate()),
+        },
+    });
+
+    const passengerCount = count + 1;
+    return `${yy}${mm}${ww}${String(passengerCount).padStart(4, "0")}`;
 };

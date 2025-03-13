@@ -1,11 +1,14 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, Column, ManyToOne, CreateDateColumn, UpdateDateColumn, PrimaryGeneratedColumn } from 'typeorm';
 import { Route } from './Route';
 import { City } from './City';
 
 @Entity()
 export class Booking {
-    @PrimaryGeneratedColumn('uuid')
-    booking_id: string;
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @Column({ unique: true })
+    booking_number: string;
 
     @ManyToOne(() => Route, { nullable: false, onDelete: "CASCADE" })
     route: Route;
@@ -60,6 +63,9 @@ export class Booking {
 
     @Column({ type: 'text', nullable: true })
     notes: string;
+
+    @Column({ nullable: false })
+    booking_user_id: number;
 
     @Column({ type: 'boolean', default: true })
     is_active: boolean;

@@ -62,3 +62,18 @@ export const searchCitiesByCountry = async (req: Request, res: Response) => {
         return handleError(res, 500, error.message);
     }
 };
+
+export const getAllCity = async (req: Request, res: Response) => {
+    try {
+        const cityRepository = getRepository(City);
+
+        const cityResult = await cityRepository.find({ where: { is_deleted: false } });
+
+        if (!cityResult) return handleError(res, 404, 'No bus stops found.');
+
+        return handleSuccess(res, 200, 'Bus stops retrieved successfully.', cityResult);
+    } catch (error: any) {
+        console.error("Error in getAllCity:", error);
+        return handleError(res, 500, error.message);
+    }
+};

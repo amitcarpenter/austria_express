@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Booking Confirmation - Austria Express</title>
+    <title>Booking Cancellation - Austria Express</title>
     <style>
         body {
             margin: 0;
@@ -95,52 +95,51 @@
         <table>
             <tr>
                 <td class="header">
-                    Booking Confirmation - Austria Express
+                    Booking Cancellation - Austria Express
                 </td>
             </tr>
             <tr>
                 <td class="content">
-                    <p>Dear <%= first_name %> <%= last_name %>,</p>
-                    <p>Thank you for choosing Austria Express! Your booking has been confirmed. Below are your details:</p>
+                    <p>Dear <%= first_name %>
+                            <%= last_name %>,</p>
+                    <p>We regret to inform you that your booking has been cancelled. Below are the details:</p>
 
                     <table class="ride-details" width="100%" cellpadding="0" cellspacing="0">
                         <tr>
                             <td><strong>Booking Number:</strong></td>
-                            <td><%= booking_number %></td>
+                            <td>
+                                <%= booking_number %>
+                            </td>
                         </tr>
                         <tr>
                             <td><strong>Departure:</strong></td>
-                            <td><%= from_city %></td>
+                            <td>
+                                <%= from_city %>
+                            </td>
                         </tr>
                         <tr>
                             <td><strong>Destination:</strong></td>
-                            <td><%= to_city %></td>
+                            <td>
+                                <%= to_city %>
+                            </td>
                         </tr>
                         <tr>
                             <td><strong>Departure Date & Time:</strong></td>
-                            <td><%= departure_datetime %></td>
+                            <td>
+                                <%= departure_datetime %>
+                            </td>
                         </tr>
                         <tr>
                             <td><strong>Total Amount:</strong></td>
-                            <td>&euro;<%= total_amount %></td>
+                            <td>&euro;<%= total_amount %>
+                            </td>
                         </tr>
                     </table>
-                    
-                    <h3>Passenger Details:</h3>
-                    <table class="ride-details" width="100%" cellpadding="0" cellspacing="0">
-                        <tr>
-                            <td><strong>Passenger Name</strong></td>
-                            <td><strong>Seat Number</strong></td>
-                        </tr>
-                        <% passengers.forEach(passenger => { %>
-                        <tr>
-                            <td><%= passenger.passengerName %></td>
-                            <td><%= passenger.selectedSeat %></td>
-                        </tr>
-                        <% }) %>
-                    </table>
-                    
-                    <p>You will receive another email soon with seat allocation and final confirmation.</p>
+
+                    <p>If you are eligible for a refund, the amount will be processed back to your original payment
+                        method within the next few business days.</p>
+                    <p>We apologize for any inconvenience caused. If you have any questions, please contact our support
+                        team.</p>
                 </td>
             </tr>
             <tr>

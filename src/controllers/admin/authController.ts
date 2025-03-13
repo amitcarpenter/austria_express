@@ -15,6 +15,7 @@ import { handleError, handleSuccess } from "../../utils/responseHandler";
 import { Bus } from "../../entities/Bus";
 import { Route } from "../../entities/Route";
 import { BusSchedule } from "../../entities/BusSchedule";
+import { Booking } from "../../entities/Booking";
 
 dotenv.config();
 
@@ -143,9 +144,9 @@ export const login_admin = async (req: Request, res: Response) => {
     const admin = await adminRepository.findOneBy({ email });
 
     if (!admin) {
-    return handleError(res, 404, "Admin not found. Please check the email and try again.");
+      return handleError(res, 404, "Admin not found. Please check the email and try again.");
     }
-    
+
     const isMatch = await bcrypt.compare(password, admin.password);
     if (!isMatch) {
       return handleError(res, 400, "Incorrect password. Please try again.")
@@ -160,7 +161,7 @@ export const login_admin = async (req: Request, res: Response) => {
 
     admin.jwt_token = token;
     await adminRepository.save(admin);
-    
+
     return handleSuccess(res, 200, "Login Successful.", token)
   } catch (error: any) {
     return handleError(res, 500, error.message);
@@ -365,11 +366,13 @@ export const dashboard_details = async (req: Request, res: Response) => {
     const busRepository = getRepository(Bus);
     const routeRepository = getRepository(Route);
     const busscheduleRepository = getRepository(BusSchedule);
+    const bookingRepository = getRepository(Booking);
 
     const userCount = (await userRepository.count({ where: { is_verified: true } }));
     const busCount = await busRepository.count({ where: { is_deleted: false } });
     const routeCount = await routeRepository.count({ where: { is_deleted: false } });
     const busScheduleCount = await busscheduleRepository.count();
+    const bookingCount = await bookingRepository.count({ where: { is_deleted: false } });
     const userList = await userRepository.find({ where: { is_verified: true }, take: 5, order: { id: 'DESC' } });
 
     let data = {
@@ -377,6 +380,7 @@ export const dashboard_details = async (req: Request, res: Response) => {
       busCount: busCount || 0,
       routeCount: routeCount || 0,
       busScheduleCount: !busScheduleCount ? 0 : busScheduleCount,
+      bookingCount: !bookingCount ? 0 : bookingCount,
       userList: !userList ? [] : userList
     };
 

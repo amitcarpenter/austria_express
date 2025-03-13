@@ -105,7 +105,6 @@ export const register = async (req: Request, res: Response) => {
 export const verifyEmail = async (req: Request, res: Response) => {
   try {
     const { token } = req.query;
-    console.log(token)
     if (typeof token !== 'string') {
       return handleError(res, 400, "Invalid token.");
     }

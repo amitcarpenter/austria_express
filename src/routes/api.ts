@@ -8,7 +8,8 @@ import * as authControllers from "../controllers/api/authController";
 import * as busControllers from "../controllers/api/busController";
 import * as cityControllers from "../controllers/api/cityController";
 import * as cityControllersAdmin from "../controllers/admin/cityController";
-
+import * as bookingController from "../controllers/api/bookingController";
+import * as ticketTypeControllers from "../controllers/api/ticketTypeController";
 
 const router = express.Router();
 
@@ -38,9 +39,16 @@ router.post("/bus-search", busControllers.bus_search);
 //==================================== City ===============================
 router.post("/search-by-city", cityControllers.searchCities);
 router.post("/cities-countries-search", cityControllers.searchCitiesByCountry);
+router.get("/get-all-city", cityControllers.getAllCity);
 
 //======================== Cities ======================================
 router.get("/get-all-city", cityControllersAdmin.getAllActiveCity);
 
+//==================================== Booking ==============================
+router.post("/create-booking", authenticateUser, bookingController.create_booking);
+router.get("/get-ticket-booking-by-booking-id", authenticateUser, bookingController.getTicketBookingByBookingId);
+
+//==================================== Ticket Type ==============================
+router.post("/get-ticket-type-by-routeid", authenticateUser, ticketTypeControllers.get_ticket_type_by_routeid);
 
 export default router;

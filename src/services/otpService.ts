@@ -19,7 +19,7 @@ export const generateOTP = (): string => {
 
 
 const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
+    host: 'host207.checkdomain.de',
     port: 587,
     secure: false,
     auth: {

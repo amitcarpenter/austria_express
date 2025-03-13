@@ -11,7 +11,7 @@ import * as routeClosureControllers from "../controllers/admin/routeClosureContr
 import * as ticketTypeControllers from "../controllers/admin/ticketTypeController";
 import * as busControllers from "../controllers/admin/busController";
 import * as busscheduleControllers from "../controllers/admin/busscheduleController";
-import * as bookingControllers from "../controllers/admin/bookingControllers";
+import * as bookingControllers from "../controllers/admin/bookingController";
 import * as cityControllers from "../controllers/admin/cityController";
 import * as contactUsControllers from "../controllers/admin/contactUsController";
 import { get_lat_long } from "../utils/latlong";
@@ -88,6 +88,7 @@ router.get("/get-all-buses-by-limit-search", authenticateAdmin, busControllers.g
 router.post("/update-bus", authenticateAdmin, busControllers.update_bus);
 router.post("/update-bus-status", authenticateAdmin, busControllers.update_bus_status);
 router.post("/delete-bus", authenticateAdmin, busControllers.delete_bus);
+router.post("/bus-search", authenticateAdmin, busControllers.bus_search);
 
 //==================================== Bus Schedule ==============================
 router.post("/create-busschedule", authenticateAdmin, busscheduleControllers.create_busschedule);
@@ -103,6 +104,8 @@ router.post("/get-all-booking", authenticateAdmin, bookingControllers.get_all_bo
 router.get("/get-booking-byid", authenticateAdmin, bookingControllers.get_booking_by_id);
 router.post("/update-booking-byid", authenticateAdmin, bookingControllers.update_booking_by_id);
 router.get("/delete-booking-byid", authenticateAdmin, bookingControllers.delete_booking_by_id);
+router.post("/get-booking-by-route-date-and-from-to", authenticateAdmin, bookingControllers.get_booking_by_route_date_and_from_to);
+router.get("/get-ticket-booking-by-booking-id", authenticateAdmin, bookingControllers.getTicketBookingByBookingId);
 
 //=================================== Lat Long ==========================
 router.post("/get-lat-long", get_lat_long);
