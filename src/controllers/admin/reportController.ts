@@ -189,7 +189,7 @@ export const earningReports = async (req: Request, res: Response) => {
         const ticketRevenues = await bookingPassengerRepository
         .createQueryBuilder("bp")
         .select("bp.ticket_type", "ticket_type")
-        .addSelect("SUM(bp.price)", "total_revenue") // ✅ Summing up bp.price instead of b.total
+        .addSelect("SUM(bp.price)", "total_revenue")
         .groupBy("bp.ticket_type")
         .getRawMany();
     
