@@ -67,7 +67,7 @@ export const createStripeCheckoutSession = async (req: Request, res: Response) =
             },
         });
 
-        res.json({ url: session.url });
+       return res.json({ url: session.url });
 
     } catch (error) {
         return res.status(500).json({ error: true, message: `Internal server error + ' ' + ${error}`, status: 500, success: false });
