@@ -120,5 +120,6 @@ router.post("/customer-query-responded", authenticateAdmin, contactUsControllers
 
 //=================================== Report ==========================
 router.post("/booking-report", authenticateAdmin, reportControllers.bookingReports);
+router.post("/earning-report", authenticateAdmin, reportControllers.earningReports);
 
 export default router;

@@ -418,7 +418,7 @@ export const dashboard_details = async (req: Request, res: Response) => {
     const latestBooking = await bookingRepository.find({
       where: { is_deleted: false },
       order: { created_at: "DESC" },
-      take: 20,
+      take: 10,
       relations: ['route', 'from', 'to']
     });
 

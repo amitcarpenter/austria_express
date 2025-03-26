@@ -47,7 +47,7 @@ router.get("/get-all-city", cityControllersAdmin.getAllActiveCity);
 
 //==================================== Booking ==============================
 router.post("/create-booking", authenticateUser, bookingController.create_booking);
-router.get("/get-ticket-booking-by-booking-id", authenticateUser, bookingController.getTicketBookingByBookingId);
+router.get("/get-ticket-booking-by-booking-id", bookingController.getTicketBookingByBookingId);
 
 //==================================== Ticket Type ==============================
 router.post("/get-ticket-type-by-routeid", authenticateUser, ticketTypeControllers.get_ticket_type_by_routeid);
