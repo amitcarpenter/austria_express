@@ -10,6 +10,7 @@ import * as cityControllers from "../controllers/api/cityController";
 import * as cityControllersAdmin from "../controllers/admin/cityController";
 import * as bookingController from "../controllers/api/bookingController";
 import * as ticketTypeControllers from "../controllers/api/ticketTypeController";
+import * as paymentControllers from "../controllers/api/paymentController";
 
 const router = express.Router();
 
@@ -50,5 +51,9 @@ router.get("/get-ticket-booking-by-booking-id", authenticateUser, bookingControl
 
 //==================================== Ticket Type ==============================
 router.post("/get-ticket-type-by-routeid", authenticateUser, ticketTypeControllers.get_ticket_type_by_routeid);
+
+//==================================== Payment ==============================
+router.post("/create-stripe-checkout-session", authenticateUser, paymentControllers.createStripeCheckoutSession);
+router.get("/create-liqpay-checkout-session", authenticateUser, paymentControllers.createLiqpayCheckoutSession)
 
 export default router;

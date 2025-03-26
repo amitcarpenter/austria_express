@@ -20,7 +20,7 @@ export class Booking {
     to: City;
 
     @Column({ type: 'date', nullable: false })
-    travel_date: Date;
+    travel_date: string;
 
     @Column()
     departure_time: string;
@@ -33,6 +33,9 @@ export class Booking {
 
     @Column()
     payment_method: string;
+
+    @Column({ type: 'boolean', default: false })
+    payment_status: boolean;
 
     @Column({ type: 'decimal', precision: 10, scale: 2 })
     subtotal: number;

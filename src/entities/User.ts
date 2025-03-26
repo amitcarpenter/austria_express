@@ -59,6 +59,9 @@ export class User {
     @Column({ nullable: true, default: "traditional" })
     signup_method: string;
 
+    @Column({ nullable: true, default: null })
+    stripe_customer_id: string;
+
     @CreateDateColumn()
     created_at: Date;
 

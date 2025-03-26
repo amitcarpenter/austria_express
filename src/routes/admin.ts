@@ -14,6 +14,7 @@ import * as busscheduleControllers from "../controllers/admin/busscheduleControl
 import * as bookingControllers from "../controllers/admin/bookingController";
 import * as cityControllers from "../controllers/admin/cityController";
 import * as contactUsControllers from "../controllers/admin/contactUsController";
+import * as reportControllers from "../controllers/admin/reportController";
 import { get_lat_long } from "../utils/latlong";
 import { get_location } from "../utils/searchLocation";
 
@@ -116,5 +117,8 @@ router.post("/get-location", get_location);
 //=================================== Contact Us ==========================
 router.get("/contact-us-search-with-limit", authenticateAdmin, contactUsControllers.getAllContactUsBySearchLimit);
 router.post("/customer-query-responded", authenticateAdmin, contactUsControllers.customerQueryResponse);
+
+//=================================== Report ==========================
+router.post("/booking-report", authenticateAdmin, reportControllers.bookingReports);
 
 export default router;

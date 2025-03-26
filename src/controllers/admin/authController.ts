@@ -9,13 +9,15 @@ import { User } from "../../entities/User";
 import { IAdmin } from "../../models/Admin";
 import { Admin } from "../../entities/Admin";
 import { Request, Response } from "express";
-import { getRepository, MoreThan } from "typeorm";
+import { getRepository, IsNull, LessThanOrEqual, MoreThanOrEqual, MoreThan, Not, And, Like, In, Between } from "typeorm";
 import { sendEmail } from "../../services/otpService";
 import { handleError, handleSuccess } from "../../utils/responseHandler";
 import { Bus } from "../../entities/Bus";
 import { Route } from "../../entities/Route";
 import { BusSchedule } from "../../entities/BusSchedule";
 import { Booking } from "../../entities/Booking";
+import moment from "moment";
+import { RouteClosure } from "../../entities/RouteClosure";
 
 dotenv.config();
 
@@ -362,26 +364,100 @@ export const changePassword = async (req: Request, res: Response) => {
 
 export const dashboard_details = async (req: Request, res: Response) => {
   try {
-    const userRepository = getRepository(User);
-    const busRepository = getRepository(Bus);
-    const routeRepository = getRepository(Route);
     const busscheduleRepository = getRepository(BusSchedule);
     const bookingRepository = getRepository(Booking);
+    const routeClosureRepository = getRepository(RouteClosure);
 
-    const userCount = (await userRepository.count({ where: { is_verified: true } }));
-    const busCount = await busRepository.count({ where: { is_deleted: false } });
-    const routeCount = await routeRepository.count({ where: { is_deleted: false } });
-    const busScheduleCount = await busscheduleRepository.count();
-    const bookingCount = await bookingRepository.count({ where: { is_deleted: false } });
-    const userList = await userRepository.find({ where: { is_verified: true }, take: 5, order: { id: 'DESC' } });
+    const travelDate = moment().format('YYYY-MM-DD');
+    const weekday = moment().format('dddd');
+    const startOfMonth = moment().startOf('month').toDate();
+    const endOfMonth = moment().endOf('month').toDate();
 
-    let data = {
-      userCount: userCount || 0,
-      busCount: busCount || 0,
-      routeCount: routeCount || 0,
-      busScheduleCount: !busScheduleCount ? 0 : busScheduleCount,
-      bookingCount: !bookingCount ? 0 : bookingCount,
-      userList: !userList ? [] : userList
+    const totalBuses = await busscheduleRepository.find({
+      where: [
+        { from: And(Not(IsNull()), LessThanOrEqual(travelDate)), to: And(Not(IsNull()), MoreThanOrEqual(travelDate)), days_of_week: Like(`%${weekday}%`), is_deleted: false },
+        { from: IsNull(), to: IsNull(), days_of_week: Like(`%${weekday}%`), is_deleted: false }
+      ],
+      relations: ['bus', 'route']
+    });
+
+    const routeIds = totalBuses.map(schedule => schedule.route?.route_id).filter(Boolean);
+
+    const closedRoutes = await routeClosureRepository.find({
+      where: {
+        route: In(routeIds),
+        from_date: And(Not(IsNull()), LessThanOrEqual(travelDate)),
+        to_date: And(Not(IsNull()), MoreThanOrEqual(travelDate))
+      }
+    });
+
+    const closedRouteIds = new Set(closedRoutes.map(routeClosure => routeClosure.route?.route_id));
+    const filteredBusSchedules = totalBuses.filter(schedule => !closedRouteIds.has(schedule.route?.route_id));
+
+    const bookingsToday = await bookingRepository.find({
+      where: {
+        route: In(routeIds),
+        travel_date: travelDate,
+        is_deleted: false
+      },
+      relations: ['route']
+    });
+
+    const bookingCountsMap: Record<number, number> = {};
+    bookingsToday.forEach(booking => {
+      const routeId = booking.route?.route_id;
+      if (routeId) {
+        bookingCountsMap[routeId] = (bookingCountsMap[routeId] || 0) + 1;
+      }
+    });
+
+    filteredBusSchedules.forEach(schedule => {
+      (schedule as any).booking_count = bookingCountsMap[schedule.route?.route_id] || 0;
+    });
+
+    const latestBooking = await bookingRepository.find({
+      where: { is_deleted: false },
+      order: { created_at: "DESC" },
+      take: 20,
+      relations: ['route', 'from', 'to']
+    });
+
+    const allBookings = await bookingRepository.find({
+      where: { is_deleted: false, created_at: Between(moment().startOf('year').toDate(), moment().endOf('year').toDate()) },
+      order: { created_at: "DESC" },
+      relations: ['route', 'from', 'to']
+    });
+
+    const bookingsPerMonth: Record<string, number> = {};
+    allBookings.forEach(booking => {
+      const month = moment(booking.travel_date).format('MMM');
+      bookingsPerMonth[month] = (bookingsPerMonth[month] || 0) + 1;
+    });
+
+    const totalBookingsPerMonth = Object.entries(bookingsPerMonth).map(([month, totalBookings]) => ({ month, totalBookings }));
+
+    const currentMonthBookings = allBookings.filter(booking => moment(booking.created_at).isBetween(startOfMonth, endOfMonth, 'day', '[]'));
+    const totalEarnings = currentMonthBookings.reduce((sum, booking) => sum + (Number(booking.total) || 0), 0);
+
+    const bookingCount = currentMonthBookings.length;
+
+    const [confirmed, pending, cancelled] = await Promise.all([
+      bookingRepository.count({ where: { booking_status: 'Confirmed', is_deleted: false } }),
+      bookingRepository.count({ where: { booking_status: 'Pending', is_deleted: false } }),
+      bookingRepository.count({ where: { booking_status: 'Cancelled', is_deleted: false } })
+    ]);
+
+    const bookingStatusCounts = { confirmed, pending, cancelled };
+
+    const data = {
+      todayBuses: filteredBusSchedules,
+      latestBooking,
+      totalBookingsPerMonth,
+      allBookings: {
+        bookingCount,
+        totalEarnings: Number(totalEarnings)
+      },
+      bookingStatusInAGraph: bookingStatusCounts
     };
 
     return handleSuccess(res, 200, "Dashboard Data Retrieved Successfully", data);
